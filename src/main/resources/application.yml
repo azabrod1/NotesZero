@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: notes
+  datasource:
+    url: jdbc:h2:mem:notes;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+notes:
+  ai:
+    provider: mock
+    notebook-routing-high-risk-threshold: 0.72
+    monthly-budget-gbp: 50.0

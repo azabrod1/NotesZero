@@ -1,0 +1,91 @@
+import {
+  ClarificationTask,
+  Note,
+  NoteMutationPayload,
+  Notebook,
+  QueryResponse,
+  SourceType
+} from "./types";
+
+interface CreateNotePayload extends NoteMutationPayload {
+  sourceType: SourceType;
+}
+
+interface ResolveClarificationPayload {
+  selectedOption: string;
+}
+
+interface AskPayload {
+  notebookId: number;
+  question: string;
+}
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init);
+  const payload = await response.text();
+
+  if (!response.ok) {
+    throw new Error(payload || `${response.status} ${response.statusText}`);
+  }
+
+  if (!payload) {
+    return undefined as unknown as T;
+  }
+
+  try {
+    return JSON.parse(payload) as T;
+  } catch (error) {
+    throw new Error(
+      `Server returned non-JSON payload for ${path}. ` +
+        `If the backend is down, start it on http://127.0.0.1:8080.`
+    );
+  }
+}
+
+export const apiClient = {
+  listNotebooks(): Promise<Notebook[]> {
+    return request<Notebook[]>("/api/v1/notebooks");
+  },
+
+  listNotes(notebookId: number): Promise<Note[]> {
+    return request<Note[]>(`/api/v1/notes?notebookId=${encodeURIComponent(notebookId)}`);
+  },
+
+  createNote(payload: CreateNotePayload): Promise<Note> {
+    return request<Note>("/api/v1/notes", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateNote(noteId: number, payload: NoteMutationPayload): Promise<Note> {
+    return request<Note>(`/api/v1/notes/${noteId}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  listClarifications(): Promise<ClarificationTask[]> {
+    return request<ClarificationTask[]>("/api/v1/clarifications");
+  },
+
+  resolveClarification(taskId: number, payload: ResolveClarificationPayload): Promise<Note> {
+    return request<Note>(`/api/v1/clarifications/${taskId}/resolve`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  askNotebook(payload: AskPayload): Promise<QueryResponse> {
+    return request<QueryResponse>("/api/v1/query", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    });
+  }
+};
