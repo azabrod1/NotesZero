@@ -7,13 +7,15 @@ interface SidebarProps {
   activeNotebookId: number | null;
   collapsed: boolean;
   onSelectNotebook: (id: number) => void;
+  onCreateNotebook: () => void;
 }
 
 export function Sidebar({
   notebooks,
   activeNotebookId,
   collapsed,
-  onSelectNotebook
+  onSelectNotebook,
+  onCreateNotebook
 }: SidebarProps) {
   return (
     <aside
@@ -47,7 +49,7 @@ export function Sidebar({
       </div>
 
       <div className={styles.footer}>
-        <button className={styles.newBtn} disabled>
+        <button className={styles.newBtn} onClick={onCreateNotebook}>
           <Plus size={14} />
           New Notebook
         </button>

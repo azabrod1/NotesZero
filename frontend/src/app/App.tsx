@@ -41,7 +41,7 @@ export function App() {
       id: msgId(),
       role: "assistant",
       mode: "capture",
-      content: "Capture notes, ask your notebook, or edit the current page.",
+      content: "Jot down ideas, ask your notebook anything, or make quick edits.",
       createdAt: new Date().toISOString()
     }
   ]);
@@ -132,6 +132,28 @@ export function App() {
     }
   };
 
+  const createNotebook = useCallback(async () => {
+    const name = window.prompt("Notebook name:");
+    if (!name?.trim()) return;
+    const description = window.prompt("Short description:") ?? "";
+    setBusy(true);
+    try {
+      const nb = await apiClient.createNotebook({
+        name: name.trim(),
+        description: description.trim() || name.trim()
+      });
+      setNotebooks((prev) => [...prev, nb]);
+      setActiveNotebookId(nb.id);
+      setDraftMode(false);
+      setSelectedNoteId(null);
+      setStatusLine(`Created notebook "${nb.name}".`);
+    } catch (err) {
+      setStatusLine(`Failed to create notebook: ${(err as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   const createDraftPage = useCallback(() => {
     setDraftMode(true);
     setSelectedNoteId(null);
@@ -213,7 +235,7 @@ export function App() {
           rawText: text, sourceType: "TEXT", notebookId: activeNotebookId
         });
         await refreshNotebook(activeNotebookId);
-        setStatusLine("Captured as a new page.");
+        setStatusLine("Saved as a new page.");
         pushMsg({
           id: msgId(), role: "assistant", mode: chatMode,
           content: `Saved to ${created.notebookName ?? activeNotebook?.name ?? "notebook"}.`,
@@ -285,6 +307,7 @@ export function App() {
             setActiveNotebookId(id);
             setSelectedNoteId(null);
           }}
+          onCreateNotebook={createNotebook}
         />
 
         <main className={styles.main}>

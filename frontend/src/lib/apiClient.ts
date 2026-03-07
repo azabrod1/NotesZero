@@ -49,6 +49,14 @@ export const apiClient = {
     return request<Notebook[]>("/api/v1/notebooks");
   },
 
+  createNotebook(payload: { name: string; description: string }): Promise<Notebook> {
+    return request<Notebook>("/api/v1/notebooks", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    });
+  },
+
   listNotes(notebookId: number): Promise<Note[]> {
     return request<Note[]>(`/api/v1/notes?notebookId=${encodeURIComponent(notebookId)}`);
   },

@@ -10,7 +10,7 @@ interface ChatComposerProps {
 }
 
 const PLACEHOLDER: Record<ChatMode, string> = {
-  capture: "Capture a quick note...",
+  capture: "Jot down a thought...",
   query: "Ask your notebook a question...",
   edit: "Describe an edit to the current page..."
 };

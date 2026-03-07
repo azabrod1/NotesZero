@@ -16,7 +16,7 @@ interface ChatDockProps {
 }
 
 const MODES: { key: ChatMode; label: string }[] = [
-  { key: "capture", label: "Capture" },
+  { key: "capture", label: "Jot" },
   { key: "query", label: "Ask" },
   { key: "edit", label: "Edit" }
 ];

@@ -6,11 +6,34 @@ import TaskList from "@tiptap/extension-task-list";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
+import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FileText } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { EditorToolbar } from "./EditorToolbar";
 import styles from "./NoteEditor.module.css";
+
+const TabHandler = Extension.create({
+  name: "tabHandler",
+  addKeyboardShortcuts() {
+    return {
+      Tab: ({ editor }) => {
+        if (editor.isActive("bulletList") || editor.isActive("orderedList") || editor.isActive("taskList")) {
+          return editor.chain().sinkListItem("listItem").run()
+            || editor.chain().sinkListItem("taskItem").run();
+        }
+        return true; // prevent default browser Tab behavior
+      },
+      "Shift-Tab": ({ editor }) => {
+        if (editor.isActive("bulletList") || editor.isActive("orderedList") || editor.isActive("taskList")) {
+          return editor.chain().liftListItem("listItem").run()
+            || editor.chain().liftListItem("taskItem").run();
+        }
+        return true;
+      }
+    };
+  }
+});
 
 interface NoteEditorProps {
   value: string;
@@ -34,7 +57,8 @@ export function NoteEditor({ value, onChange, placeholder }: NoteEditorProps) {
       TaskList,
       TaskItem.configure({ nested: true }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Link.configure({ openOnClick: false, autolink: true })
+      Link.configure({ openOnClick: false, autolink: true }),
+      TabHandler
     ],
     content: value,
     onUpdate: ({ editor: e }) => {

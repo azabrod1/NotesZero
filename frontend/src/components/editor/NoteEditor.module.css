@@ -16,7 +16,7 @@
 }
 
 /* TipTap editor content styles */
-.editor .ProseMirror {
+.editor :global(.ProseMirror) {
   outline: none;
   min-height: 100%;
   font-family: var(--font-body);
@@ -25,11 +25,11 @@
   color: var(--text);
 }
 
-.editor .ProseMirror > * + * {
+.editor :global(.ProseMirror) > * + * {
   margin-top: 0.6em;
 }
 
-.editor .ProseMirror p.is-editor-empty:first-child::before {
+.editor :global(.ProseMirror) p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   color: var(--text-faint);
@@ -37,7 +37,7 @@
   height: 0;
 }
 
-.editor .ProseMirror h1 {
+.editor :global(.ProseMirror) h1 {
   font-family: var(--font-heading);
   font-size: var(--text-2xl);
   font-weight: 800;
@@ -46,7 +46,7 @@
   margin-top: 1.2em;
 }
 
-.editor .ProseMirror h2 {
+.editor :global(.ProseMirror) h2 {
   font-family: var(--font-heading);
   font-size: var(--text-xl);
   font-weight: 700;
@@ -55,7 +55,7 @@
   margin-top: 1em;
 }
 
-.editor .ProseMirror h3 {
+.editor :global(.ProseMirror) h3 {
   font-family: var(--font-heading);
   font-size: var(--text-lg);
   font-weight: 700;
@@ -63,35 +63,35 @@
   margin-top: 0.8em;
 }
 
-.editor .ProseMirror ul,
-.editor .ProseMirror ol {
+.editor :global(.ProseMirror) ul,
+.editor :global(.ProseMirror) ol {
   padding-left: 1.5em;
 }
 
-.editor .ProseMirror ul {
+.editor :global(.ProseMirror) ul {
   list-style: disc;
 }
 
-.editor .ProseMirror ol {
+.editor :global(.ProseMirror) ol {
   list-style: decimal;
 }
 
-.editor .ProseMirror li {
+.editor :global(.ProseMirror) li {
   margin-top: 0.15em;
 }
 
-.editor .ProseMirror li > p {
+.editor :global(.ProseMirror) li > p {
   margin-top: 0;
 }
 
-.editor .ProseMirror blockquote {
+.editor :global(.ProseMirror) blockquote {
   border-left: 3px solid var(--accent);
   padding-left: var(--sp-4);
   color: var(--text-muted);
   font-style: italic;
 }
 
-.editor .ProseMirror pre {
+.editor :global(.ProseMirror) pre {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -101,7 +101,7 @@
   overflow-x: auto;
 }
 
-.editor .ProseMirror code {
+.editor :global(.ProseMirror) code {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -110,61 +110,61 @@
   font-size: 0.88em;
 }
 
-.editor .ProseMirror pre code {
+.editor :global(.ProseMirror) pre code {
   background: none;
   border: none;
   padding: 0;
   border-radius: 0;
 }
 
-.editor .ProseMirror a {
+.editor :global(.ProseMirror) a {
   color: var(--accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.editor .ProseMirror a:hover {
+.editor :global(.ProseMirror) a:hover {
   color: var(--accent-hover);
 }
 
-.editor .ProseMirror mark {
+.editor :global(.ProseMirror) mark {
   background: var(--amber-soft);
   color: inherit;
   border-radius: 2px;
   padding: 1px 2px;
 }
 
-.editor .ProseMirror hr {
+.editor :global(.ProseMirror) hr {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1.5em 0;
 }
 
 /* Task list styling */
-.editor .ProseMirror ul[data-type="taskList"] {
+.editor :global(.ProseMirror) ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
 }
 
-.editor .ProseMirror ul[data-type="taskList"] li {
+.editor :global(.ProseMirror) ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-2);
 }
 
-.editor .ProseMirror ul[data-type="taskList"] li > label {
+.editor :global(.ProseMirror) ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   margin-top: 4px;
 }
 
-.editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+.editor :global(.ProseMirror) ul[data-type="taskList"] li > label input[type="checkbox"] {
   accent-color: var(--accent);
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
 
-.editor .ProseMirror ul[data-type="taskList"] li > div {
+.editor :global(.ProseMirror) ul[data-type="taskList"] li > div {
   flex: 1;
 }
 
