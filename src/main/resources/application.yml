@@ -38,3 +38,5 @@ notes:
     provider: mock
     notebook-routing-high-risk-threshold: 0.72
     monthly-budget-gbp: 50.0
+  cors:
+    allowed-origin-patterns: ${NOTES_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:3000,http://localhost:5173,https://*.up.railway.app}
