@@ -9,11 +9,12 @@ Structured personal notes app with:
 - OneNote-style notebook/page UX with rich-text editing and a minimizable chat dock
 
 ## Tech Stack
-- Backend: Java 15, Spring Boot 2.7, JPA, Flyway
+- Backend: Java 25, Spring Boot 3.5, JPA, Flyway
 - DB: H2 (default dev/test), PostgreSQL profile
 - Frontend: React 18 + TypeScript + Vite 7 + ReactQuill
 
 ## Runtime Requirements
+- JDK `25` for backend commands (`mvn ...`)
 - Node.js `>=20.19.0` for frontend commands (`vite` requires modern Node)
 
 ## Quick Start
@@ -22,6 +23,11 @@ Structured personal notes app with:
 mvn spring-boot:run
 ```
 API is available at `http://localhost:8080`.
+
+On Windows, to force JDK 25 even if your global `JAVA_HOME` is old:
+```powershell
+.\run-backend.ps1 -Mode run
+```
 
 ### Frontend
 ```bash
@@ -40,6 +46,11 @@ On Windows, if your default `node` is still old, use:
 ### Backend
 ```bash
 mvn test
+```
+
+Windows JDK-25-safe test command:
+```powershell
+.\run-backend.ps1 -Mode clean-test
 ```
 
 ### Frontend

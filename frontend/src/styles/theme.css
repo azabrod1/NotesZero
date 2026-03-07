@@ -1,0 +1,109 @@
+:root {
+  /* --- Dark theme (default) --- */
+  --bg: #0f1419;
+  --surface: #1a1f26;
+  --surface-raised: #222830;
+  --surface-overlay: #2a3038;
+  --border: #2d333b;
+  --border-strong: #3d444d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-faint: #5a6370;
+  --accent: #00d4aa;
+  --accent-hover: #00eabc;
+  --accent-soft: rgba(0, 212, 170, 0.12);
+  --accent-text: #00d4aa;
+  --amber: #f0a830;
+  --amber-soft: rgba(240, 168, 48, 0.12);
+  --danger: #f85149;
+  --danger-soft: rgba(248, 81, 73, 0.12);
+  --editor-bg: #161b22;
+  --chat-user-bg: #00d4aa;
+  --chat-user-text: #0f1419;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
+
+  /* --- Spacing --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+
+  /* --- Radius --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* --- Typography --- */
+  --font-heading: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  /* --- Transitions --- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
+
+  /* --- Layout --- */
+  --topbar-h: 48px;
+  --sidebar-w: 240px;
+  --tab-h: 40px;
+  --chat-expanded: 28vh;
+  --chat-collapsed: 42px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f2ed;
+  --surface: #ffffff;
+  --surface-raised: #faf8f5;
+  --surface-overlay: #f0ede8;
+  --border: #e0dbd4;
+  --border-strong: #c8c2b8;
+  --text: #1c1917;
+  --text-muted: #78716c;
+  --text-faint: #a8a29e;
+  --accent: #0d9373;
+  --accent-hover: #0aa882;
+  --accent-soft: rgba(13, 147, 115, 0.10);
+  --accent-text: #087f63;
+  --amber: #d97706;
+  --amber-soft: rgba(217, 119, 6, 0.10);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.08);
+  --editor-bg: #fffffe;
+  --chat-user-bg: #0d9373;
+  --chat-user-text: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
+
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  transition:
+    background-color var(--duration-slow) var(--ease-in-out),
+    color var(--duration-slow) var(--ease-in-out);
+}

@@ -1,37 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
-const STORAGE_KEY = "notes-app-theme";
+const STORAGE_KEY = "notes-theme";
 
-function resolveInitialTheme(): Theme {
+function getSystemTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function getInitialTheme(): Theme {
   try {
-    const fromStorage = window.localStorage.getItem(STORAGE_KEY);
-    if (fromStorage === "light" || fromStorage === "dark") {
-      return fromStorage;
-    }
-  } catch {
-    // Continue with system preference if storage is unavailable.
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {}
+  return getSystemTheme();
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(resolveInitialTheme);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     try {
-      window.localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // Ignore storage write errors.
-    }
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {}
   }, [theme]);
 
-  const toggleTheme = useMemo(
-    () => () => setTheme((current) => (current === "light" ? "dark" : "light")),
-    []
-  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const handler = () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) setTheme(mq.matches ? "light" : "dark");
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
-  return { theme, toggleTheme };
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
+
+  return { theme, toggleTheme } as const;
 }

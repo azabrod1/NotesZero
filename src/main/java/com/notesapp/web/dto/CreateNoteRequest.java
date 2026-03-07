@@ -2,9 +2,9 @@ package com.notesapp.web.dto;
 
 import com.notesapp.domain.enums.SourceType;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 public class CreateNoteRequest {
@@ -72,3 +72,4 @@ public class CreateNoteRequest {
         this.photoContentType = photoContentType;
     }
 }
+

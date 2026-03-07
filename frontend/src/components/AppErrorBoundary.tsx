@@ -9,6 +9,40 @@ interface AppErrorBoundaryState {
   message: string;
 }
 
+const crashStyle: React.CSSProperties = {
+  minHeight: "100%",
+  display: "grid",
+  placeContent: "center",
+  gap: 12,
+  padding: 32,
+  fontFamily: "var(--font-body)",
+  color: "var(--text)"
+};
+
+const headingStyle: React.CSSProperties = {
+  margin: 0,
+  fontFamily: "var(--font-heading)",
+  fontSize: "1.4rem",
+  fontWeight: 700
+};
+
+const msgStyle: React.CSSProperties = {
+  margin: 0,
+  color: "var(--text-muted)",
+  fontSize: "0.9rem"
+};
+
+const btnStyle: React.CSSProperties = {
+  justifySelf: "start",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  background: "var(--surface)",
+  color: "var(--text)",
+  padding: "8px 16px",
+  cursor: "pointer",
+  fontWeight: 600
+};
+
 export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   public constructor(props: AppErrorBoundaryProps) {
     super(props);
@@ -29,10 +63,10 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="app-crash">
-          <h1>Frontend runtime error</h1>
-          <p>{this.state.message}</p>
-          <button type="button" onClick={() => window.location.reload()}>
+        <div style={crashStyle}>
+          <h1 style={headingStyle}>Something went wrong</h1>
+          <p style={msgStyle}>{this.state.message}</p>
+          <button type="button" style={btnStyle} onClick={() => window.location.reload()}>
             Reload
           </button>
         </div>

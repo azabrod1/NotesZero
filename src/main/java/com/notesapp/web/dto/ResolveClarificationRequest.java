@@ -1,6 +1,6 @@
 package com.notesapp.web.dto;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 public class ResolveClarificationRequest {
 
@@ -15,3 +15,4 @@ public class ResolveClarificationRequest {
         this.selectedOption = selectedOption;
     }
 }
+

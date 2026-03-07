@@ -1,7 +1,7 @@
 package com.notesapp.web.dto;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 public class UpdateNoteRequest {
@@ -38,3 +38,4 @@ public class UpdateNoteRequest {
         this.notebookId = notebookId;
     }
 }
+

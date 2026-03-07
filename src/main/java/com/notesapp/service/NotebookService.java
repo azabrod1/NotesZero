@@ -7,7 +7,7 @@ import com.notesapp.web.dto.NotebookResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -72,3 +72,4 @@ public class NotebookService {
         return new NotebookResponse(notebook.getId(), notebook.getName(), notebook.getDescription(), notebook.getCreatedAt());
     }
 }
+

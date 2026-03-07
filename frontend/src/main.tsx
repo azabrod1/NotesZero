@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "react-quill/dist/quill.snow.css";
+import "./styles/reset.css";
+import "./styles/fonts.css";
+import "./styles/theme.css";
 import { App } from "./app/App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 
@@ -14,5 +16,5 @@ ReactDOM.createRoot(container).render(
     <AppErrorBoundary>
       <App />
     </AppErrorBoundary>
-  </React.StrictMode>,
+  </React.StrictMode>
 );
