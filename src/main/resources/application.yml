@@ -30,6 +30,9 @@ management:
       exposure:
         include: health,info,metrics
 
+server:
+  port: ${PORT:8080}
+
 notes:
   ai:
     provider: mock

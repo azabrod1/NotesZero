@@ -1,0 +1,7 @@
+.git
+.idea
+.vite
+target
+frontend/node_modules
+frontend/dist
+backend.log

@@ -39,7 +39,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (error) {
     throw new Error(
       `Server returned non-JSON payload for ${path}. ` +
-        `If the backend is down, start it on http://127.0.0.1:8080.`
+        "Check that the API is running and reachable from this site."
     );
   }
 }

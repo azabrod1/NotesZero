@@ -64,6 +64,7 @@ npm run build
 ## Profiles
 - Default: in-memory H2
 - PostgreSQL: `--spring.profiles.active=postgres`
+- Railway demo deploy: `--spring.profiles.active=railway`
 
 ## AI Provider Model
 `notes.ai.provider` supports:
@@ -90,3 +91,30 @@ npm run build
 - Add OCR worker for uploaded images.
 - Add authentication and multi-user tenancy.
 - Add OpenAPI generation and contract tests from spec.
+
+## Railway Deploy
+Recommended POC deploy shape:
+- one Railway service using the root `Dockerfile`
+- one Railway volume mounted at `/data`
+- `railway` Spring profile for file-backed H2 persistence
+
+Why this shape:
+- the React frontend now builds into the Spring Boot jar, so the app is served from one public URL
+- `notes.ai.provider` stays on `mock`, so there is no AI API cost by default
+- the Railway profile switches H2 from in-memory to file-backed storage so demo data survives restarts
+
+### One-Time Setup
+1. Push this repo to GitHub.
+2. In Railway, create a new project from the GitHub repo.
+3. Add a volume and mount it at `/data`.
+4. Set `SPRING_PROFILES_ACTIVE=railway`.
+5. Deploy and open the generated Railway domain.
+
+### Update Flow
+- make changes in this repo
+- push to the tracked branch
+- Railway rebuilds and redeploys automatically
+
+### Notes
+- If you skip the volume, the app still works, but the H2 database becomes ephemeral.
+- If you want PostgreSQL later, switch to the `postgres` profile and provide the datasource env vars instead.
