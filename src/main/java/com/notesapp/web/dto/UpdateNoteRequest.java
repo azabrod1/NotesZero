@@ -7,7 +7,7 @@ import java.time.Instant;
 public class UpdateNoteRequest {
 
     @NotBlank
-    @Size(max = 20000)
+    @Size(max = 500000)
     private String rawText;
 
     private Instant occurredAt;

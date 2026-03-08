@@ -2,6 +2,7 @@ package com.notesapp.service.routing;
 
 import com.notesapp.domain.Notebook;
 import com.notesapp.domain.RoutingFeedback;
+import com.notesapp.service.NoteContentHelper;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -14,8 +15,14 @@ import java.util.Set;
 @Component
 public class DeterministicRoutingService {
 
+    private final NoteContentHelper contentHelper;
+
+    public DeterministicRoutingService(NoteContentHelper contentHelper) {
+        this.contentHelper = contentHelper;
+    }
+
     public RoutingDecision route(RoutingInput input) {
-        String text = normalize(input.getRawText());
+        String text = normalize(contentHelper.toPlainText(input.getRawText()));
         if (text.isBlank() || input.getNotebooks().isEmpty()) {
             return RoutingDecision.unresolved(new ArrayList<>());
         }

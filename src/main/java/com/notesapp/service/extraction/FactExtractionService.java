@@ -1,5 +1,6 @@
 package com.notesapp.service.extraction;
 
+import com.notesapp.service.NoteContentHelper;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -27,8 +28,10 @@ public class FactExtractionService {
         Pattern.compile("(?i)\\bdog\\b.*\\bpoop(?:ed)?\\b");
 
     private final Map<String, Integer> wordNumbers = new HashMap<>();
+    private final NoteContentHelper contentHelper;
 
-    public FactExtractionService() {
+    public FactExtractionService(NoteContentHelper contentHelper) {
+        this.contentHelper = contentHelper;
         wordNumbers.put("one", 1);
         wordNumbers.put("two", 2);
         wordNumbers.put("three", 3);
@@ -43,7 +46,7 @@ public class FactExtractionService {
 
     public List<ExtractedFact> extract(String rawText) {
         List<ExtractedFact> facts = new ArrayList<>();
-        String normalized = rawText == null ? "" : rawText.trim();
+        String normalized = contentHelper.toPlainText(rawText);
         if (normalized.isEmpty()) {
             return facts;
         }

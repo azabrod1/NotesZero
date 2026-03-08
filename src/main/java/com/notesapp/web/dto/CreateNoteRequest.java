@@ -12,7 +12,7 @@ public class CreateNoteRequest {
     private Long notebookId;
 
     @NotBlank
-    @Size(max = 20000)
+    @Size(max = 500000)
     private String rawText;
 
     @NotNull

@@ -5,6 +5,7 @@ import com.notesapp.domain.Note;
 import com.notesapp.domain.enums.FactValueType;
 import com.notesapp.repository.FactRepository;
 import com.notesapp.repository.NoteRepository;
+import com.notesapp.service.NoteContentHelper;
 import com.notesapp.service.NotebookService;
 import com.notesapp.web.dto.QueryResponse;
 import org.springframework.stereotype.Service;
@@ -24,11 +25,14 @@ public class NotebookQueryService {
     private final NoteRepository noteRepository;
     private final FactRepository factRepository;
     private final NotebookService notebookService;
+    private final NoteContentHelper contentHelper;
 
-    public NotebookQueryService(NoteRepository noteRepository, FactRepository factRepository, NotebookService notebookService) {
+    public NotebookQueryService(NoteRepository noteRepository, FactRepository factRepository,
+                                NotebookService notebookService, NoteContentHelper contentHelper) {
         this.noteRepository = noteRepository;
         this.factRepository = factRepository;
         this.notebookService = notebookService;
+        this.contentHelper = contentHelper;
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +102,7 @@ public class NotebookQueryService {
         }
         String joined = notes.stream()
             .limit(3)
-            .map(Note::getRawText)
+            .map(note -> contentHelper.toPlainText(note.getRawText()))
             .collect(Collectors.joining(" | "));
         List<Long> citations = notes.stream()
             .limit(3)

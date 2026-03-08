@@ -26,7 +26,7 @@ public class Page {
     @Column(nullable = false, length = 128)
     private String title;
 
-    @Column(name = "content_current", nullable = false, length = 20000)
+    @Column(name = "content_current", nullable = false, length = 500000)
     private String contentCurrent;
 
     @Column(name = "updated_at", nullable = false)

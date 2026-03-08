@@ -7,7 +7,7 @@ import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
 import { useTheme } from "../hooks/useTheme";
 import { apiClient } from "../lib/apiClient";
-import { ensureHtml, escapeHtml, stripHtml } from "../lib/textUtils";
+import { isBlockNoteEmpty } from "../lib/textUtils";
 import type { ChatMessage, ChatMode, ClarificationTask, Note, Notebook } from "../lib/types";
 import styles from "./App.module.css";
 
@@ -24,7 +24,7 @@ export function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
   const [draftMode, setDraftMode] = useState(false);
-  const [editorValue, setEditorValue] = useState("<p></p>");
+  const [editorValue, setEditorValue] = useState("[]");
   const [isDirty, setIsDirty] = useState(false);
   const [clarifications, setClarifications] = useState<ClarificationTask[]>([]);
 
@@ -57,6 +57,13 @@ export function App() {
     [notes, selectedNoteId]
   );
 
+  /* ── editor key for re-mount on note switch ── */
+  const editorKey = useMemo(() => {
+    if (draftMode) return "draft";
+    if (selectedNoteId !== null) return `note-${selectedNoteId}`;
+    return "empty";
+  }, [draftMode, selectedNoteId]);
+
   /* ── bootstrap ── */
   useEffect(() => {
     void bootstrap();
@@ -69,7 +76,7 @@ export function App() {
   useEffect(() => {
     if (draftMode) return;
     if (selectedNote) {
-      setEditorValue(ensureHtml(selectedNote.rawText ?? ""));
+      setEditorValue(selectedNote.rawText ?? "[]");
       setIsDirty(false);
       return;
     }
@@ -77,7 +84,7 @@ export function App() {
       setSelectedNoteId(notes[0].id);
       return;
     }
-    setEditorValue("<p></p>");
+    setEditorValue("[]");
     setSelectedNoteId(null);
   }, [selectedNote, notes, draftMode]);
 
@@ -157,7 +164,19 @@ export function App() {
   const createDraftPage = useCallback(() => {
     setDraftMode(true);
     setSelectedNoteId(null);
-    setEditorValue("<h1>Untitled page</h1><p></p>");
+    setEditorValue(JSON.stringify([
+      {
+        type: "heading",
+        props: { level: 1 },
+        content: [{ type: "text", text: "Untitled page", styles: {} }],
+        children: []
+      },
+      {
+        type: "paragraph",
+        content: [],
+        children: []
+      }
+    ]));
     setIsDirty(true);
   }, []);
 
@@ -166,7 +185,7 @@ export function App() {
       setStatusLine("Select a notebook first.");
       return;
     }
-    if (!stripHtml(editorValue).trim()) {
+    if (isBlockNoteEmpty(editorValue)) {
       setStatusLine("Cannot save an empty page.");
       return;
     }
@@ -258,13 +277,25 @@ export function App() {
           });
           return;
         }
-        const updatedHtml = `${editorValue}<p>${escapeHtml(text)}</p>`;
+        // Append a paragraph block to the current BlockNote JSON
+        let currentBlocks: unknown[];
+        try {
+          currentBlocks = JSON.parse(editorValue);
+        } catch {
+          currentBlocks = [];
+        }
+        const newBlock = {
+          type: "paragraph",
+          content: [{ type: "text", text: text, styles: {} }],
+          children: []
+        };
+        const updatedJson = JSON.stringify([...currentBlocks, newBlock]);
         await apiClient.updateNote(selectedNoteId, {
-          rawText: updatedHtml,
+          rawText: updatedJson,
           notebookId: activeNotebookId,
           occurredAt: selectedNote?.occurredAt ?? null
         });
-        setEditorValue(updatedHtml);
+        setEditorValue(updatedJson);
         setIsDirty(false);
         await refreshNotebook(activeNotebookId);
         pushMsg({
@@ -329,12 +360,14 @@ export function App() {
 
           <div className={styles.editorArea}>
             <NoteEditor
-              value={editorValue}
-              onChange={(html) => {
-                setEditorValue(html);
+              key={editorKey}
+              initialContent={editorValue}
+              onChange={(json) => {
+                setEditorValue(json);
                 setIsDirty(true);
               }}
               placeholder="Start writing your note..."
+              theme={theme}
             />
           </div>
 

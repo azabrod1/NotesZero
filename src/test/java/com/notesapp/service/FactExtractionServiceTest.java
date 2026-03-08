@@ -1,5 +1,6 @@
 package com.notesapp.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notesapp.service.extraction.ExtractedFact;
 import com.notesapp.service.extraction.FactExtractionService;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FactExtractionServiceTest {
 
-    private final FactExtractionService service = new FactExtractionService();
+    private final FactExtractionService service = new FactExtractionService(new NoteContentHelper(new ObjectMapper()));
 
     @Test
     void extractsNumericFactsFromInventoryAndConsumptionText() {

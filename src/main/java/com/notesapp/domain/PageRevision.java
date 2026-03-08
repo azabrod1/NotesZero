@@ -23,7 +23,7 @@ public class PageRevision {
     @JoinColumn(name = "page_id", nullable = false)
     private Page page;
 
-    @Column(name = "content_snapshot", nullable = false, length = 20000)
+    @Column(name = "content_snapshot", nullable = false, length = 500000)
     private String contentSnapshot;
 
     @Column(name = "source_note_ids", nullable = false, length = 1000)

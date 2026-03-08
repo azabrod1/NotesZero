@@ -1,4 +1,3 @@
-import DOMPurify from "dompurify";
 import type { ChatMessage as ChatMessageType } from "../../lib/types";
 import styles from "./ChatMessage.module.css";
 
@@ -19,15 +18,13 @@ function formatTime(iso: string): string {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
-  const sanitized = DOMPurify.sanitize(message.content);
 
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
       <div className={styles.bubble}>
-        <div
-          className={styles.bubbleContent}
-          dangerouslySetInnerHTML={{ __html: sanitized }}
-        />
+        <div className={styles.bubbleContent}>
+          {message.content}
+        </div>
       </div>
       <div className={styles.meta}>
         <span className={styles.time}>{formatTime(message.createdAt)}</span>

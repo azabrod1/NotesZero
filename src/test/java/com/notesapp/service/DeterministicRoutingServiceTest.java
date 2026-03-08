@@ -1,5 +1,6 @@
 package com.notesapp.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notesapp.domain.Notebook;
 import com.notesapp.service.routing.DeterministicRoutingService;
 import com.notesapp.service.routing.RoutingDecision;
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DeterministicRoutingServiceTest {
 
-    private final DeterministicRoutingService routingService = new DeterministicRoutingService();
+    private final DeterministicRoutingService routingService = new DeterministicRoutingService(new NoteContentHelper(new ObjectMapper()));
 
     @Test
     void routesDogTextToDogNotebook() {

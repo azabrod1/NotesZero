@@ -18,10 +18,13 @@ public class PageService {
 
     private final PageRepository pageRepository;
     private final PageRevisionRepository pageRevisionRepository;
+    private final NoteContentHelper contentHelper;
 
-    public PageService(PageRepository pageRepository, PageRevisionRepository pageRevisionRepository) {
+    public PageService(PageRepository pageRepository, PageRevisionRepository pageRevisionRepository,
+                       NoteContentHelper contentHelper) {
         this.pageRepository = pageRepository;
         this.pageRevisionRepository = pageRevisionRepository;
+        this.contentHelper = contentHelper;
     }
 
     @Transactional
@@ -33,7 +36,8 @@ public class PageService {
         Page page = pageRepository.findByNotebook_IdAndTitleIgnoreCase(notebook.getId(), DEFAULT_TITLE)
             .orElseGet(() -> new Page(notebook, DEFAULT_TITLE, "# " + notebook.getName() + "\n\n", now));
 
-        String line = "- " + now + ": " + note.getRawText().trim() + "\n";
+        String plainText = contentHelper.toPlainText(note.getRawText());
+        String line = "- " + now + ": " + plainText + "\n";
         String nextContent = page.getContentCurrent() + line;
         page.setContentCurrent(nextContent);
         page.setUpdatedAt(now);

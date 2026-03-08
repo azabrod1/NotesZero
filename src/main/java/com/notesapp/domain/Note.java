@@ -31,7 +31,7 @@ public class Note {
     @JoinColumn(name = "notebook_id")
     private Notebook notebook;
 
-    @Column(name = "raw_text", nullable = false, length = 20000)
+    @Column(name = "raw_text", nullable = false, length = 500000)
     private String rawText;
 
     @Enumerated(EnumType.STRING)

@@ -49,6 +49,7 @@ public class NoteService {
     private final AiProperties aiProperties;
     private final NoteResponseAssembler noteResponseAssembler;
     private final PageService pageService;
+    private final NoteContentHelper contentHelper;
 
     public NoteService(NoteRepository noteRepository,
                        FactRepository factRepository,
@@ -60,7 +61,8 @@ public class NoteService {
                        AiProviderSelector aiProviderSelector,
                        AiProperties aiProperties,
                        NoteResponseAssembler noteResponseAssembler,
-                       PageService pageService) {
+                       PageService pageService,
+                       NoteContentHelper contentHelper) {
         this.noteRepository = noteRepository;
         this.factRepository = factRepository;
         this.clarificationTaskRepository = clarificationTaskRepository;
@@ -72,6 +74,7 @@ public class NoteService {
         this.aiProperties = aiProperties;
         this.noteResponseAssembler = noteResponseAssembler;
         this.pageService = pageService;
+        this.contentHelper = contentHelper;
     }
 
     @Transactional
@@ -353,13 +356,13 @@ public class NoteService {
     }
 
     private String summarizePhrase(String rawText) {
-        if (rawText == null) {
+        String plain = contentHelper.toPlainText(rawText);
+        if (plain.isEmpty()) {
             return "";
         }
-        String text = rawText.trim();
-        if (text.length() <= 80) {
-            return text.toLowerCase(Locale.ROOT);
+        if (plain.length() <= 80) {
+            return plain.toLowerCase(Locale.ROOT);
         }
-        return text.substring(0, 80).toLowerCase(Locale.ROOT);
+        return plain.substring(0, 80).toLowerCase(Locale.ROOT);
     }
 }
