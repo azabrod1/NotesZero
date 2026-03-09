@@ -86,6 +86,18 @@ npm run build
   - same `occurredAt` timestamp
   - same raw note text
 
+## Deploying Frontend to Vercel
+1. Create a new Vercel project and set the **Root Directory** to `frontend`.
+2. Add environment variable `VITE_API_BASE_URL` to your deployed backend base URL (for example `https://your-backend.example.com`).
+3. Ensure your backend allows CORS from the Vercel frontend domain.
+4. Deploy with:
+   ```bash
+   cd frontend
+   npx vercel --prod
+   ```
+
+`frontend/vercel.json` includes an SPA rewrite so client-side routes resolve to `index.html`.
+
 ## Next Production Steps
 - Replace fallback AI clients with real Anthropic/OpenAI adapters.
 - Add OCR worker for uploaded images.
