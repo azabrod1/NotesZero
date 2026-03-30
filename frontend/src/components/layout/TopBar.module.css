@@ -69,7 +69,7 @@
 .right {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
+  gap: var(--sp-2);
 }
 
 .iconBtn {
@@ -95,4 +95,25 @@
   font-size: var(--text-xs);
   color: var(--text-faint);
   padding: 0 var(--sp-2);
+}
+
+.saveBtn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.saveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

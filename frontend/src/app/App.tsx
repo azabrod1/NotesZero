@@ -130,11 +130,12 @@ export function App() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
+        e.stopPropagation();
         void savePage();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
   });
 
   const bootstrap = async () => {
@@ -385,6 +386,11 @@ export function App() {
         onToggleTheme={toggleTheme}
         onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}
         statusText={isDirty ? "Unsaved changes" : statusLine}
+        onSave={() => {
+          void savePage();
+        }}
+        saveDisabled={!isDirty || busy}
+        saveBusy={busy && isDirty}
       />
 
       <div className={styles.body}>

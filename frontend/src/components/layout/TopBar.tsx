@@ -7,6 +7,9 @@ interface TopBarProps {
   onToggleTheme: () => void;
   onToggleSidebar: () => void;
   statusText?: string;
+  onSave: () => void;
+  saveDisabled?: boolean;
+  saveBusy?: boolean;
 }
 
 export function TopBar({
@@ -14,7 +17,10 @@ export function TopBar({
   theme,
   onToggleTheme,
   onToggleSidebar,
-  statusText
+  statusText,
+  onSave,
+  saveDisabled,
+  saveBusy
 }: TopBarProps) {
   return (
     <header className={styles.topbar}>
@@ -41,6 +47,15 @@ export function TopBar({
         {statusText && (
           <span className={styles.saveIndicator}>{statusText}</span>
         )}
+        <button
+          className={styles.saveBtn}
+          onClick={onSave}
+          disabled={saveDisabled}
+          title="Save note (Ctrl+S)"
+          aria-label="Save note"
+        >
+          {saveBusy ? "Saving..." : "Save"}
+        </button>
         <button
           className={styles.iconBtn}
           onClick={onToggleTheme}
