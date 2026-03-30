@@ -202,7 +202,7 @@ function MobileNav({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 56,
+    height: "var(--mobile-nav-h)",
     background: "var(--surface)",
     borderTop: "1px solid var(--border)",
     display: "flex",

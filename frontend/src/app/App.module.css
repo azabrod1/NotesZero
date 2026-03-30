@@ -20,7 +20,7 @@
 @media (max-width: 767px) {
   .root {
     grid-template-columns: minmax(0, 1fr);
-    padding-bottom: 56px;
+    padding-bottom: var(--mobile-nav-h);
   }
 }
 
@@ -71,6 +71,6 @@
 /* Mobile nav bar space */
 @media (max-width: 767px) {
   .chatFab {
-    bottom: 80px;
+    bottom: calc(var(--mobile-nav-h) + 24px);
   }
 }

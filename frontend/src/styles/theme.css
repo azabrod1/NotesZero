@@ -68,6 +68,7 @@
   /* --- Layout --- */
   --sidebar-w: 280px;
   --chat-w: 320px;
+  --mobile-nav-h: 56px;
 
   color-scheme: dark;
 }
