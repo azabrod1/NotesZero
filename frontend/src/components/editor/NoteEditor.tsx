@@ -4,7 +4,6 @@ import "@blocknote/mantine/style.css";
 import { PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
-import { FileText } from "lucide-react";
 import { useEffect, useRef } from "react";
 import styles from "./NoteEditor.module.css";
 
@@ -99,9 +98,11 @@ export function NoteEditor({ initialContent, onChange, placeholder, theme }: Not
 
   if (!editor) {
     return (
-      <div className={styles.emptyState}>
-        <FileText size={48} />
-        <span className={styles.emptyStateText}>Loading editor...</span>
+      <div className={styles.skeleton}>
+        <div className={styles.skeletonBar} style={{ width: "70%" }} />
+        <div className={styles.skeletonBar} style={{ width: "100%" }} />
+        <div className={styles.skeletonBar} style={{ width: "85%" }} />
+        <div className={styles.skeletonBar} style={{ width: "60%" }} />
       </div>
     );
   }

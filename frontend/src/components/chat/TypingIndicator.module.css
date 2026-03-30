@@ -1,0 +1,22 @@
+.wrapper {
+  align-self: flex-start;
+}
+
+.bubble {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-faint);
+}

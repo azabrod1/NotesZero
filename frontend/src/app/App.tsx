@@ -1,461 +1,243 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChatDock } from "../components/chat/ChatDock";
-import { NoteEditor } from "../components/editor/NoteEditor";
-import { PageTabBar } from "../components/layout/PageTabBar";
+import { useCallback, useEffect, useState } from "react";
+import { MessageSquare } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { ChatPanel } from "../components/chat/ChatPanel";
+import { EditorView } from "../components/editor/EditorView";
 import { Sidebar } from "../components/layout/Sidebar";
-import { TopBar } from "../components/layout/TopBar";
+import { useChat } from "../hooks/useChat";
+import { useBreakpoints } from "../hooks/useMediaQuery";
+import { useNoteEditor } from "../hooks/useNoteEditor";
+import { useNotebooks } from "../hooks/useNotebooks";
 import { useTheme } from "../hooks/useTheme";
-import { apiClient } from "../lib/apiClient";
-import { isBlockNoteEmpty } from "../lib/textUtils";
-import type { ChatMessage, CommitChatResponse, Note, NoteSummary, Notebook } from "../lib/types";
 import styles from "./App.module.css";
-
-function msgId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function createGenericDraftJson(): string {
-  return "[]";
-}
-
-function isSystemInboxTitle(title?: string | null): boolean {
-  return (title ?? "").trim().toLowerCase() === "inbox";
-}
-
-function isHiddenInboxCommit(result: CommitChatResponse): boolean {
-  return Boolean(result.patchPlan.fallbackToInbox && isSystemInboxTitle(result.updatedNote?.title));
-}
-
-function assistantSummary(result: CommitChatResponse): string {
-  if (result.answer) {
-    return result.answer;
-  }
-  if (!result.updatedNote || !result.applyResult) {
-    return "No note changes were applied.";
-  }
-  if (isHiddenInboxCommit(result)) {
-    return `Queued this in ${result.updatedNote.notebookName ?? "the selected notebook"} for later organization.`;
-  }
-  if (result.patchPlan.fallbackToInbox) {
-    return `Queued this in "${result.updatedNote.title}" for later organization.`;
-  }
-  const sectionCount = result.applyResult.changedSectionIds.length;
-  const sectionText = sectionCount === 1 ? "1 section" : `${sectionCount} sections`;
-  return `Updated "${result.updatedNote.title}" in ${result.updatedNote.notebookName ?? "the selected notebook"} and changed ${sectionText}.`;
-}
 
 export function App() {
   const { theme, toggleTheme } = useTheme();
+  const { isMobile } = useBreakpoints();
 
-  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [activeNotebookId, setActiveNotebookId] = useState<number | null>(null);
-  const [notes, setNotes] = useState<NoteSummary[]>([]);
-  const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [draftMode, setDraftMode] = useState(false);
-  const [editorValue, setEditorValue] = useState("[]");
-  const [isDirty, setIsDirty] = useState(false);
+  // --- State hooks ---
+  const {
+    notebooks,
+    activeNotebook,
+    activeNotebookId,
+    isLoading: notebooksLoading,
+    selectNotebook,
+    createNotebook,
+  } = useNotebooks();
 
-  const [busy, setBusy] = useState(false);
-  const [statusLine, setStatusLine] = useState("Ready.");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [chatMinimized, setChatMinimized] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: msgId(),
-      role: "assistant",
-      content: "Message a thought, edit request, or question. NotesZero will route it, patch the note, and keep an undo trail.",
-      createdAt: new Date().toISOString()
-    }
-  ]);
+  const noteEditor = useNoteEditor(activeNotebookId);
 
-  const activeNotebook = useMemo(
-    () => notebooks.find((nb) => nb.id === activeNotebookId) ?? null,
-    [activeNotebookId, notebooks]
-  );
-  const selectedNoteIdRef = useRef<number | null>(null);
-  const draftModeRef = useRef(false);
-  const loadSequenceRef = useRef(0);
-  const loadedEditorValueRef = useRef("[]");
+  const chat = useChat({
+    activeNotebookId,
+    selectedNoteId: noteEditor.draftMode ? null : noteEditor.selectedNoteId,
+    selectedNoteRevisionId: noteEditor.draftMode ? null : noteEditor.selectedNote?.currentRevisionId ?? null,
+    draftMode: noteEditor.draftMode,
+    syncUpdatedNote: noteEditor.syncUpdatedNote,
+    setActiveNotebookId: selectNotebook,
+    refreshNotebook: noteEditor.refreshNotebook,
+  });
 
-  const editorKey = useMemo(() => {
-    if (draftMode) return "draft";
-    if (selectedNoteId !== null) return `note-${selectedNoteId}-${selectedNote?.currentRevisionId ?? 0}`;
-    return "empty";
-  }, [draftMode, selectedNote?.currentRevisionId, selectedNoteId]);
+  // --- UI state ---
+  const [chatOpen, setChatOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"notes" | "editor" | "chat">("notes");
 
-  useEffect(() => {
-    void bootstrap();
-  }, []);
-
-  useEffect(() => {
-    if (activeNotebookId !== null) {
-      void refreshNotebook(activeNotebookId);
-    }
-  }, [activeNotebookId]);
-
-  useEffect(() => {
-    if (draftMode || selectedNoteId === null) {
-      return;
-    }
-    void loadNote(selectedNoteId);
-  }, [selectedNoteId, draftMode]);
-
-  useEffect(() => {
-    selectedNoteIdRef.current = selectedNoteId;
-  }, [selectedNoteId]);
-
-  useEffect(() => {
-    draftModeRef.current = draftMode;
-  }, [draftMode]);
-
-  useEffect(() => {
-    if (draftMode) {
-      return;
-    }
-    if (selectedNote) {
-      loadedEditorValueRef.current = selectedNote.editorContent ?? "[]";
-      setEditorValue(loadedEditorValueRef.current);
-      setIsDirty(false);
-      return;
-    }
-    if (selectedNoteId === null) {
-      loadedEditorValueRef.current = "[]";
-      setEditorValue("[]");
-      setIsDirty(false);
-    }
-  }, [selectedNote, selectedNoteId, draftMode]);
-
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === "s") {
         e.preventDefault();
-        e.stopPropagation();
-        void savePage();
+        void noteEditor.savePage();
+      }
+      if (mod && e.key === "n" && !e.shiftKey) {
+        e.preventDefault();
+        noteEditor.createDraftPage();
+      }
+      if (mod && (e.key === "k" || e.key === "/")) {
+        e.preventDefault();
+        setChatOpen((v) => !v);
       }
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  });
+  }, [noteEditor]);
 
-  const bootstrap = async () => {
-    setBusy(true);
-    try {
-      const nbs = await apiClient.listNotebooks();
-      setNotebooks(nbs);
-      if (nbs.length > 0) {
-        setActiveNotebookId(nbs[0].id);
-      }
-      setStatusLine("Workspace loaded.");
-    } catch (err) {
-      setStatusLine(`Failed to load workspace: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const handleSelectNotebook = useCallback((id: number) => {
+    noteEditor.clearForNotebookSwitch();
+    selectNotebook(id);
+  }, [noteEditor, selectNotebook]);
 
-  const refreshNotebook = async (notebookId: number, preferredNoteId?: number | null) => {
-    const noteItems = await apiClient.listNotes(notebookId);
-    setNotes(noteItems);
-    if (!draftModeRef.current) {
-      const resolvedPreferredNoteId = preferredNoteId ?? selectedNoteIdRef.current;
-      if (noteItems.length === 0) {
-        setSelectedNoteId(null);
-        setSelectedNote(null);
-      } else if (
-        resolvedPreferredNoteId === null ||
-        !noteItems.some((note) => note.id === resolvedPreferredNoteId)
-      ) {
-        setSelectedNote(null);
-        setSelectedNoteId(noteItems[0].id);
-      }
-    }
-  };
+  const handleSelectNote = useCallback((id: number) => {
+    noteEditor.selectNote(id);
+    if (isMobile) setMobileView("editor");
+  }, [noteEditor, isMobile]);
 
-  const loadNote = async (noteId: number) => {
-    const requestId = ++loadSequenceRef.current;
-    try {
-      const note = await apiClient.getNote(noteId);
-      if (
-        requestId !== loadSequenceRef.current ||
-        draftModeRef.current ||
-        selectedNoteIdRef.current !== noteId
-      ) {
-        return;
-      }
-      setSelectedNote(note);
-    } catch (err) {
-      setStatusLine(`Failed to load note: ${(err as Error).message}`);
-    }
-  };
+  const handleCreateDraft = useCallback(() => {
+    noteEditor.createDraftPage();
+    if (isMobile) setMobileView("editor");
+  }, [noteEditor, isMobile]);
 
-  const createNotebook = useCallback(async () => {
-    const name = window.prompt("Notebook name:");
-    if (!name?.trim()) return;
-    const description = window.prompt("Short routing description:") ?? "";
-    setBusy(true);
-    try {
-      const notebook = await apiClient.createNotebook({
-        name: name.trim(),
-        description: description.trim() || name.trim()
-      });
-      setNotebooks((prev) => [...prev, notebook]);
-      setActiveNotebookId(notebook.id);
-      setSelectedNoteId(null);
-      setSelectedNote(null);
-      setDraftMode(false);
-      setStatusLine(`Created notebook "${notebook.name}".`);
-    } catch (err) {
-      setStatusLine(`Failed to create notebook: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
-  const createDraftPage = useCallback(() => {
-    setDraftMode(true);
-    setSelectedNoteId(null);
-    setSelectedNote(null);
-    setEditorValue(createGenericDraftJson());
-    loadedEditorValueRef.current = createGenericDraftJson();
-    setIsDirty(false);
-  }, []);
-
-  const savePage = async () => {
-    if (!activeNotebookId) {
-      setStatusLine("Select a notebook first.");
-      return;
-    }
-    if (isBlockNoteEmpty(editorValue)) {
-      setStatusLine("Cannot save an empty note.");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      if (draftMode || selectedNoteId === null) {
-        const created = await apiClient.createNote({
-          notebookId: activeNotebookId,
-          noteType: "generic_note/v1",
-          editorContent: editorValue
-        });
-        setDraftMode(false);
-        setSelectedNoteId(created.id);
-        setSelectedNote(created);
-        loadedEditorValueRef.current = created.editorContent;
-        setStatusLine(`Created "${created.title}".`);
-        await refreshNotebook(activeNotebookId, created.id);
-      } else {
-        const updated = await apiClient.updateNote(selectedNoteId, {
-          notebookId: activeNotebookId,
-          editorContent: editorValue,
-          currentRevisionId: selectedNote?.currentRevisionId ?? null
-        });
-        setSelectedNote(updated);
-        loadedEditorValueRef.current = updated.editorContent;
-        setStatusLine("Note saved.");
-        await refreshNotebook(activeNotebookId, updated.id);
-      }
-      setIsDirty(false);
-    } catch (err) {
-      setStatusLine(`Save failed: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const pushMessage = (message: ChatMessage) => {
-    setChatMessages((prev) => [...prev, message]);
-  };
-
-  const recentChatEventIds = (): number[] =>
-    chatMessages
-      .map((message) => message.commit?.chatEventId ?? null)
-      .filter((value): value is number => value !== null)
-      .slice(-3);
-
-  const syncUpdatedNote = async (note: Note) => {
-    if (isSystemInboxTitle(note.title)) {
-      if (note.notebookId != null && note.notebookId === activeNotebookId) {
-        await refreshNotebook(note.notebookId, selectedNoteIdRef.current);
-      }
-      return;
-    }
-    setDraftMode(false);
-    setSelectedNoteId(note.id);
-    setSelectedNote(note);
-    setEditorValue(note.editorContent);
-    loadedEditorValueRef.current = note.editorContent;
-    setIsDirty(false);
-
-    if (note.notebookId) {
-      setActiveNotebookId(note.notebookId);
-      await refreshNotebook(note.notebookId, note.id);
-    }
-  };
-
-  const submitChat = async (text: string) => {
-    pushMessage({
-      id: msgId(),
-      role: "user",
-      content: text,
-      createdAt: new Date().toISOString()
-    });
-
-    if (activeNotebookId === null) {
-      pushMessage({
-        id: msgId(),
-        role: "assistant",
-        content: "Select a notebook first.",
-        createdAt: new Date().toISOString()
-      });
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const result = await apiClient.commitChat({
-        message: text,
-        selectedNotebookId: activeNotebookId,
-        selectedNoteId: draftMode ? null : selectedNoteId,
-        recentChatEventIds: recentChatEventIds(),
-        currentRevisionId: draftMode ? null : selectedNote?.currentRevisionId ?? null
-      });
-
-      if (result.updatedNote) {
-        await syncUpdatedNote(result.updatedNote);
-      }
-
-      pushMessage({
-        id: msgId(),
-        role: "assistant",
-        content: assistantSummary(result),
-        createdAt: new Date().toISOString(),
-        commit: result,
-        undo: result.updatedNote && result.undoToken
-          ? {
-              noteId: result.updatedNote.id,
-              operationId: Number(result.undoToken)
-            }
-          : null
-      });
-      setStatusLine(result.answer ? "Answer ready." : result.applyResult?.outcome ?? "Chat handled.");
-    } catch (err) {
-      pushMessage({
-        id: msgId(),
-        role: "assistant",
-        content: `Request failed: ${(err as Error).message}`,
-        createdAt: new Date().toISOString()
-      });
-      setStatusLine(`Chat failed: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const undoOperation = async (noteId: number, operationId: number) => {
-    setBusy(true);
-    try {
-      const result = await apiClient.undo(noteId, operationId);
-      await syncUpdatedNote(result.updatedNote);
-      pushMessage({
-        id: msgId(),
-        role: "assistant",
-        content: `Undo restored the previous revision of "${result.updatedNote.title}".`,
-        createdAt: new Date().toISOString()
-      });
-      setStatusLine("Undo applied.");
-    } catch (err) {
-      pushMessage({
-        id: msgId(),
-        role: "assistant",
-        content: `Undo failed: ${(err as Error).message}`,
-        createdAt: new Date().toISOString()
-      });
-      setStatusLine(`Undo failed: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className={styles.root}>
-      <TopBar
-        notebookName={activeNotebook?.name ?? null}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}
-        statusText={isDirty ? "Unsaved changes" : statusLine}
-        onSave={() => {
-          void savePage();
-        }}
-        saveDisabled={!isDirty || busy}
-        saveBusy={busy && isDirty}
-      />
-
-      <div className={styles.body}>
-        <Sidebar
-          notebooks={notebooks}
-          activeNotebookId={activeNotebookId}
-          collapsed={sidebarCollapsed}
-          onSelectNotebook={(id) => {
-            setDraftMode(false);
-            setActiveNotebookId(id);
-            setSelectedNoteId(null);
-            setSelectedNote(null);
-            loadedEditorValueRef.current = "[]";
-            setEditorValue("[]");
-            setIsDirty(false);
-          }}
-          onCreateNotebook={createNotebook}
-        />
-
-        <main className={styles.main}>
-          <PageTabBar
-            notes={notes}
-            selectedNoteId={selectedNoteId}
-            draftMode={draftMode}
-            onSelectNote={(id) => {
-              if (!draftMode && selectedNoteId === id) {
-                if (selectedNote === null) {
-                  void loadNote(id);
-                }
-                return;
-              }
-              setDraftMode(false);
-              setSelectedNote(null);
-              setSelectedNoteId(id);
-              loadedEditorValueRef.current = "[]";
-              setEditorValue("[]");
-              setIsDirty(false);
-            }}
-            onCreatePage={createDraftPage}
+  // --- Mobile: show only one view at a time ---
+  if (isMobile) {
+    return (
+      <div className={styles.root}>
+        {mobileView === "notes" && (
+          <Sidebar
+            notebooks={notebooks}
+            activeNotebookId={activeNotebookId}
+            notes={noteEditor.notes}
+            selectedNoteId={noteEditor.selectedNoteId}
+            draftMode={noteEditor.draftMode}
+            loading={notebooksLoading}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onSelectNotebook={handleSelectNotebook}
+            onSelectNote={handleSelectNote}
+            onCreateNotebook={createNotebook}
+            onCreateNote={handleCreateDraft}
           />
-
+        )}
+        {mobileView === "editor" && (
           <div className={styles.editorArea}>
-            <NoteEditor
-              key={editorKey}
-              initialContent={editorValue}
-              onChange={(json) => {
-                setEditorValue(json);
-                setIsDirty(json !== loadedEditorValueRef.current);
-              }}
-              placeholder="Start writing your note..."
+            <EditorView
+              editorKey={noteEditor.editorKey}
+              initialContent={noteEditor.editorValue}
+              selectedNote={noteEditor.selectedNote}
+              draftMode={noteEditor.draftMode}
+              isDirty={noteEditor.isDirty}
+              busy={noteEditor.busy || chat.busy}
               theme={theme}
+              onChange={noteEditor.onEditorChange}
+              onSave={() => { void noteEditor.savePage(); }}
+              onBack={() => setMobileView("notes")}
+              isMobile
             />
           </div>
-
-          <ChatDock
-            messages={chatMessages}
-            minimized={chatMinimized}
-            busy={busy}
-            onSubmit={submitChat}
-            onUndo={undoOperation}
-            onToggleMinimized={() => setChatMinimized((collapsed) => !collapsed)}
+        )}
+        {mobileView === "chat" && (
+          <ChatPanel
+            messages={chat.messages}
+            busy={chat.busy}
+            onSubmit={chat.submit}
+            onUndo={chat.undo}
+            onClose={() => setMobileView("editor")}
+            isMobile
           />
-        </main>
+        )}
+        {/* Mobile bottom nav */}
+        <MobileNav active={mobileView} onNavigate={setMobileView} />
       </div>
+    );
+  }
+
+  // --- Desktop / Tablet ---
+  return (
+    <div className={styles.root} data-chat-open={chatOpen}>
+      <Sidebar
+        notebooks={notebooks}
+        activeNotebookId={activeNotebookId}
+        notes={noteEditor.notes}
+        selectedNoteId={noteEditor.selectedNoteId}
+        draftMode={noteEditor.draftMode}
+        loading={notebooksLoading}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onSelectNotebook={handleSelectNotebook}
+        onSelectNote={handleSelectNote}
+        onCreateNotebook={createNotebook}
+        onCreateNote={handleCreateDraft}
+      />
+
+      <div className={styles.editorArea}>
+        <EditorView
+          editorKey={noteEditor.editorKey}
+          initialContent={noteEditor.editorValue}
+          selectedNote={noteEditor.selectedNote}
+          draftMode={noteEditor.draftMode}
+          isDirty={noteEditor.isDirty}
+          busy={noteEditor.busy || chat.busy}
+          theme={theme}
+          onChange={noteEditor.onEditorChange}
+          onSave={() => { void noteEditor.savePage(); }}
+        />
+      </div>
+
+      <AnimatePresence>
+        {chatOpen && (
+          <ChatPanel
+            messages={chat.messages}
+            busy={chat.busy}
+            onSubmit={chat.submit}
+            onUndo={chat.undo}
+            onClose={() => setChatOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {!chatOpen && (
+        <button
+          className={styles.chatFab}
+          onClick={() => setChatOpen(true)}
+          aria-label="Open chat"
+          title="Chat (Ctrl+K)"
+        >
+          <MessageSquare size={22} />
+          <span className={styles.chatFabHint}>K</span>
+        </button>
+      )}
     </div>
+  );
+}
+
+// Simple mobile bottom nav — will be extracted to its own file in Phase F
+function MobileNav({
+  active,
+  onNavigate,
+}: {
+  active: "notes" | "editor" | "chat";
+  onNavigate: (view: "notes" | "editor" | "chat") => void;
+}) {
+  const navStyle: React.CSSProperties = {
+    position: "fixed",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    background: "var(--surface)",
+    borderTop: "1px solid var(--border)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-around",
+    zIndex: 40,
+  };
+  const btnStyle = (isActive: boolean): React.CSSProperties => ({
+    background: "none",
+    border: "none",
+    color: isActive ? "var(--accent)" : "var(--text-muted)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    fontSize: "0.6875rem",
+    fontWeight: isActive ? 600 : 400,
+    padding: "6px 16px",
+  });
+
+  return (
+    <nav style={navStyle}>
+      <button style={btnStyle(active === "notes")} onClick={() => onNavigate("notes")}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        Notes
+      </button>
+      <button style={btnStyle(active === "editor")} onClick={() => onNavigate("editor")}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        Editor
+      </button>
+      <button style={btnStyle(active === "chat")} onClick={() => onNavigate("chat")}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+        Chat
+      </button>
+    </nav>
   );
 }
 

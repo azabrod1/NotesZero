@@ -2,28 +2,39 @@
   display: flex;
   align-items: flex-end;
   gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
   border-top: 1px solid var(--border);
   background: var(--surface);
+}
+
+.composerBusy {
+  border-top-color: var(--accent);
+  animation: pulseAccent 2s ease-in-out infinite;
+}
+
+@keyframes pulseAccent {
+  0%, 100% { border-top-color: var(--border); }
+  50% { border-top-color: var(--accent); }
 }
 
 .inputWrap {
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .input {
   width: 100%;
-  min-height: 36px;
-  max-height: 120px;
+  min-height: 40px;
+  max-height: 140px;
   padding: var(--sp-2) var(--sp-3);
-  background: var(--surface-raised);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text);
   font-size: var(--text-sm);
   resize: none;
-  line-height: 1.5;
+  line-height: 1.55;
   transition: border-color var(--duration-fast) var(--ease-out);
 }
 
@@ -36,13 +47,26 @@
   color: var(--text-faint);
 }
 
+.input:disabled {
+  opacity: 0.6;
+}
+
+.hint {
+  position: absolute;
+  bottom: -18px;
+  left: var(--sp-1);
+  font-size: 10px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
 .sendBtn {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: var(--radius-md);
   background: var(--accent);
@@ -52,10 +76,9 @@
 
 .sendBtn:hover:not(:disabled) {
   background: var(--accent-hover);
-  transform: scale(1.05);
 }
 
 .sendBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }

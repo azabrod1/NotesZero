@@ -32,7 +32,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "smoke:local": "node ./scripts/smoke-local.mjs",
-    "eval:real-openai": "node ./scripts/eval-real-openai.mjs"
+    "eval:real-openai": "node ./scripts/eval-real-openai.mjs",
+    "eval:real-openai:journey": "node ./scripts/eval-real-openai-journey.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

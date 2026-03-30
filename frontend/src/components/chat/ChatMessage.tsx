@@ -1,3 +1,6 @@
+import { motion } from "motion/react";
+import { useState } from "react";
+import { fadeSlideUp } from "../../lib/animations";
 import type { ChatMessage as ChatMessageType } from "../../lib/types";
 import styles from "./ChatMessage.module.css";
 
@@ -6,85 +9,54 @@ interface ChatMessageProps {
   onUndo: (noteId: number, operationId: number) => void;
 }
 
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  } catch {
-    return "";
-  }
-}
-
-function isSystemInboxTitle(title?: string | null): boolean {
-  return (title ?? "").trim().toLowerCase() === "inbox";
-}
-
 export function ChatMessage({ message, onUndo }: ChatMessageProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const isUser = message.role === "user";
-  const queuedForLater = Boolean(message.commit?.patchPlan.fallbackToInbox);
-  const queuedInHiddenInbox = Boolean(
-    queuedForLater && isSystemInboxTitle(message.commit?.updatedNote?.title)
-  );
+  const hasDetails = message.commit?.diff && message.commit.diff.length > 0;
+  const hasUndo = message.undo !== null && message.undo !== undefined;
 
   return (
-    <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
+    <motion.div
+      className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}
+      {...fadeSlideUp}
+    >
       <div className={styles.bubble}>
-        <div className={styles.bubbleContent}>
-          {message.content}
-          {message.commit?.updatedNote && (
-            <div className={styles.commitMeta}>
-              <div className={styles.commitRow}>
-                {queuedInHiddenInbox ? (
-                  <>
-                    Queued in <strong>{message.commit.updatedNote.notebookName ?? "Notebook"}</strong>
-                  </>
-                ) : queuedForLater ? (
-                  <>
-                    Queued in <strong>{message.commit.updatedNote.notebookName ?? "Notebook"}</strong>
-                    {" / "}
-                    <strong>{message.commit.updatedNote.title}</strong>
-                  </>
-                ) : (
-                  <>
-                    Routed to <strong>{message.commit.updatedNote.notebookName ?? "Notebook"}</strong>
-                    {" / "}
-                    <strong>{message.commit.updatedNote.title}</strong>
-                  </>
-                )}
+        <div className={styles.content}>{message.content}</div>
+
+        {hasDetails && (
+          <div className={styles.details}>
+            <button
+              className={styles.detailsToggle}
+              onClick={() => setDetailsOpen((v) => !v)}
+            >
+              {detailsOpen ? "Hide details" : "Show details"}
+            </button>
+            {detailsOpen && (
+              <div className={styles.diffList}>
+                {message.commit!.diff.map((d) => (
+                  <div key={d.sectionId} className={styles.diffItem}>
+                    <span className={styles.diffLabel}>{d.label}</span>
+                    <span className={styles.diffType}>{d.changeType}</span>
+                  </div>
+                ))}
               </div>
-              {message.commit.diff.length > 0 && (
-                <div className={styles.commitDiff}>
-                  {message.commit.diff.map((entry) => (
-                    <div key={`${message.id}-${entry.sectionId}`} className={styles.diffItem}>
-                      <span className={styles.diffLabel}>{entry.label}</span>
-                      <span className={styles.diffType}>{entry.changeType}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {message.commit.provenance && (
-                <div className={styles.provenance}>
-                  {message.commit.provenance.providerName} - confidence{" "}
-                  {(message.commit.provenance.routeConfidence * 100).toFixed(0)}%
-                </div>
-              )}
-              {message.undo && (
-                <button
-                  className={styles.undoBtn}
-                  onClick={() => onUndo(message.undo!.noteId, message.undo!.operationId)}
-                >
-                  Undo
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+        {hasUndo && (
+          <button
+            className={styles.undoBtn}
+            onClick={() => onUndo(message.undo!.noteId, message.undo!.operationId)}
+          >
+            Undo
+          </button>
+        )}
       </div>
-      <div className={styles.meta}>
-        <span className={styles.time}>{formatTime(message.createdAt)}</span>
-      </div>
-    </div>
+
+      <span className={styles.time}>
+        {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      </span>
+    </motion.div>
   );
 }

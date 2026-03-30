@@ -1,28 +1,30 @@
 :root {
-  /* --- Dark theme (default) --- */
-  --bg: #0f1419;
-  --surface: #1a1f26;
-  --surface-raised: #222830;
-  --surface-overlay: #2a3038;
-  --border: #2d333b;
-  --border-strong: #3d444d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-faint: #5a6370;
-  --accent: #00d4aa;
-  --accent-hover: #00eabc;
-  --accent-soft: rgba(0, 212, 170, 0.12);
-  --accent-text: #00d4aa;
+  /* --- Dark theme (default) — warm charcoal --- */
+  --bg: #1a1816;
+  --surface: #242220;
+  --surface-raised: #2e2b28;
+  --surface-overlay: #38342f;
+  --border: #3a3632;
+  --border-strong: #4a4540;
+  --text: #ede8e3;
+  --text-muted: #9b9490;
+  --text-faint: #6b6560;
+  --accent: #e8a065;
+  --accent-hover: #f0b07a;
+  --accent-soft: rgba(232, 160, 101, 0.12);
+  --accent-text: #e8a065;
   --amber: #f0a830;
   --amber-soft: rgba(240, 168, 48, 0.12);
-  --danger: #f85149;
-  --danger-soft: rgba(248, 81, 73, 0.12);
-  --editor-bg: #161b22;
-  --chat-user-bg: #00d4aa;
-  --chat-user-text: #0f1419;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --danger: #e85a50;
+  --danger-soft: rgba(232, 90, 80, 0.12);
+  --success: #6bc06b;
+  --success-soft: rgba(107, 192, 107, 0.12);
+  --editor-bg: #1e1c1a;
+  --chat-user-bg: #e8a065;
+  --chat-user-text: #1a1816;
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.16), 0 0 2px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.2), 0 0 4px rgba(0, 0, 0, 0.12);
 
   /* --- Spacing --- */
   --sp-1: 4px;
@@ -33,12 +35,14 @@
   --sp-6: 24px;
   --sp-8: 32px;
   --sp-10: 40px;
+  --sp-12: 48px;
 
   /* --- Radius --- */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 999px;
 
   /* --- Typography --- */
@@ -48,10 +52,11 @@
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
 
   /* --- Transitions --- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -61,39 +66,38 @@
   --duration-slow: 350ms;
 
   /* --- Layout --- */
-  --topbar-h: 48px;
-  --sidebar-w: 240px;
-  --tab-h: 40px;
-  --chat-expanded: 28vh;
-  --chat-collapsed: 42px;
+  --sidebar-w: 280px;
+  --chat-w: 320px;
 
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #f5f2ed;
+  --bg: #f8f5f0;
   --surface: #ffffff;
-  --surface-raised: #faf8f5;
+  --surface-raised: #faf7f3;
   --surface-overlay: #f0ede8;
-  --border: #e0dbd4;
-  --border-strong: #c8c2b8;
-  --text: #1c1917;
+  --border: #e8e2da;
+  --border-strong: #d4cec5;
+  --text: #2c2825;
   --text-muted: #78716c;
   --text-faint: #a8a29e;
-  --accent: #0d9373;
-  --accent-hover: #0aa882;
-  --accent-soft: rgba(13, 147, 115, 0.10);
-  --accent-text: #087f63;
+  --accent: #d4854a;
+  --accent-hover: #c07540;
+  --accent-soft: rgba(212, 133, 74, 0.10);
+  --accent-text: #b86e38;
   --amber: #d97706;
   --amber-soft: rgba(217, 119, 6, 0.10);
   --danger: #dc2626;
   --danger-soft: rgba(220, 38, 38, 0.08);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.08);
   --editor-bg: #fffffe;
-  --chat-user-bg: #0d9373;
+  --chat-user-bg: #d4854a;
   --chat-user-text: #ffffff;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06), 0 0 2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.08), 0 0 4px rgba(0, 0, 0, 0.04);
 
   color-scheme: light;
 }
@@ -103,6 +107,7 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--text-base);
+  line-height: 1.65;
   transition:
     background-color var(--duration-slow) var(--ease-in-out),
     color var(--duration-slow) var(--ease-in-out);
