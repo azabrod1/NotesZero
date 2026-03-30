@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvalResultV1",
+  "type": "object",
+  "required": ["schemaVersion", "startedAt", "finishedAt", "totalCases", "passedCases", "failedCases", "results"],
+  "properties": {
+    "schemaVersion": { "const": "EvalResultV1" },
+    "startedAt": { "type": "string" },
+    "finishedAt": { "type": "string" },
+    "backendUrl": { "type": "string" },
+    "namespace": { "type": "string" },
+    "judgeMode": { "type": "string" },
+    "worldCount": { "type": "integer" },
+    "totalCases": { "type": "integer" },
+    "passedCases": { "type": "integer" },
+    "failedCases": { "type": "integer" },
+    "categorySummary": { "type": "array", "items": { "type": "object" } },
+    "bucketSummary": { "type": "array", "items": { "type": "object" } },
+    "manualReviewCandidates": { "type": "array", "items": { "type": "object" } },
+    "comparison": { "type": ["object", "null"] },
+    "results": { "type": "array", "items": { "type": "object" } }
+  },
+  "additionalProperties": true
+}

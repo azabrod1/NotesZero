@@ -6,8 +6,7 @@
 - Service: `NotesZero`
 
 ## Access Pattern
-- Use a Railway project token via the `RAILWAY_TOKEN` environment variable for project-scoped CLI commands.
-- Do not store or commit Railway tokens in the repo.
+- The Railway project token lives in `.env` (gitignored). Load it with `export $(cat .env)` or `source .env` before running CLI commands.
 - Project tokens work for project-scoped commands such as `railway status`, `railway logs`, `railway redeploy`, and `railway domain`.
 - Project tokens may fail with account-scoped commands like `railway whoami`, `railway list`, or `railway link`.
 

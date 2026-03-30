@@ -1,7 +1,7 @@
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 
-import { Block, BlockNoteEditor, PartialBlock } from "@blocknote/core";
+import { PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { FileText } from "lucide-react";
@@ -36,10 +36,14 @@ function isLegacyHtml(raw: string): boolean {
   return trimmed.startsWith("<") && trimmed.includes(">");
 }
 
+function blankParagraph(): PartialBlock[] {
+  return [{ type: "paragraph", content: [] }];
+}
+
 export function NoteEditor({ initialContent, onChange, placeholder, theme }: NoteEditorProps) {
   const initialBlocks = parseInitialContent(initialContent);
-  const needsHtmlConversion = isLegacyHtml(initialContent);
   const onChangeRef = useRef(onChange);
+  const applyingIncomingContentRef = useRef(false);
   onChangeRef.current = onChange;
 
   const editor = useCreateBlockNote({
@@ -51,24 +55,41 @@ export function NoteEditor({ initialContent, onChange, placeholder, theme }: Not
     },
   });
 
-  // Handle legacy HTML conversion after editor is created
   useEffect(() => {
-    if (needsHtmlConversion && editor) {
+    if (!editor) {
+      return;
+    }
+    try {
+      const nextBlocks = isLegacyHtml(initialContent)
+        ? editor.tryParseHTMLToBlocks(initialContent)
+        : (parseInitialContent(initialContent) ?? blankParagraph());
+      const currentJson = JSON.stringify(editor.document);
+      const nextJson = JSON.stringify(nextBlocks);
+      if (currentJson === nextJson) {
+        return;
+      }
+      applyingIncomingContentRef.current = true;
+      editor.replaceBlocks(editor.document, nextBlocks);
+    } catch {
+      // Ignore invalid payloads and keep the current document.
+    } finally {
       try {
-        const blocks = editor.tryParseHTMLToBlocks(initialContent);
-        if (blocks.length > 0) {
-          editor.replaceBlocks(editor.document, blocks);
-        }
+        queueMicrotask(() => {
+          applyingIncomingContentRef.current = false;
+        });
       } catch {
-        // If HTML parsing fails, leave editor empty
+        applyingIncomingContentRef.current = false;
       }
     }
-  }, []); // Only on mount
+  }, [editor, initialContent]);
 
   // Emit changes as JSON
   useEffect(() => {
     if (!editor) return;
     const handler = () => {
+      if (applyingIncomingContentRef.current) {
+        return;
+      }
       const json = JSON.stringify(editor.document);
       onChangeRef.current(json);
     };
@@ -86,7 +107,7 @@ export function NoteEditor({ initialContent, onChange, placeholder, theme }: Not
   }
 
   return (
-    <div className={styles.editorWrap}>
+    <div className={styles.editorWrap} data-testid="note-editor">
       <BlockNoteView
         editor={editor}
         theme={theme ?? "dark"}

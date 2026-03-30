@@ -1,10 +1,9 @@
 import { FilePlus, FileText } from "lucide-react";
-import { noteTitle } from "../../lib/textUtils";
-import type { Note } from "../../lib/types";
+import type { NoteSummary } from "../../lib/types";
 import styles from "./PageTabBar.module.css";
 
 interface PageTabBarProps {
-  notes: Note[];
+  notes: NoteSummary[];
   selectedNoteId: number | null;
   draftMode: boolean;
   onSelectNote: (id: number) => void;
@@ -27,21 +26,22 @@ export function PageTabBar({
             key={note.id}
             className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
             onClick={() => onSelectNote(note.id)}
+            data-testid={`note-tab-${note.id}`}
           >
             <FileText size={14} />
-            <span className={styles.tabLabel}>{noteTitle(note.rawText)}</span>
+            <span className={styles.tabLabel}>{note.title}</span>
           </button>
         );
       })}
 
       {draftMode && (
-        <button className={`${styles.tab} ${styles.tabActive}`}>
+        <button className={`${styles.tab} ${styles.tabActive}`} data-testid="note-tab-draft">
           <FileText size={14} />
           <span className={styles.tabLabel}>Untitled page</span>
         </button>
       )}
 
-      <button className={styles.newTab} onClick={onCreatePage}>
+      <button className={styles.newTab} onClick={onCreatePage} data-testid="note-tab-new">
         <FilePlus size={14} />
         New
       </button>

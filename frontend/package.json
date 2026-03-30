@@ -9,15 +9,18 @@
     "@blocknote/react": "^0.47.1",
     "@mantine/core": "^8.3.16",
     "@mantine/hooks": "^8.3.16",
+    "@mantine/utils": "^6.0.22",
     "lucide-react": "^0.468.0",
     "motion": "^12.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-textarea-autosize": "^8.5.9"
   },
   "devDependencies": {
     "@types/react": "^18.2.72",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^5.1.4",
+    "playwright-core": "^1.58.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   },
@@ -27,7 +30,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "smoke:local": "node ./scripts/smoke-local.mjs",
+    "eval:real-openai": "node ./scripts/eval-real-openai.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

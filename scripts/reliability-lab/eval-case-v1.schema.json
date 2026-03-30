@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvalCaseV1",
+  "type": "object",
+  "required": ["schemaVersion", "caseId", "worldId", "category", "message", "expected"],
+  "properties": {
+    "schemaVersion": { "const": "EvalCaseV1" },
+    "caseId": { "type": "string" },
+    "worldId": { "type": "string" },
+    "category": { "type": "string" },
+    "selectedNotebookKey": { "type": ["string", "null"] },
+    "selectedNoteKey": { "type": ["string", "null"] },
+    "message": { "type": "string" },
+    "expected": { "type": "object" }
+  },
+  "additionalProperties": true
+}

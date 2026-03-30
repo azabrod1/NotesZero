@@ -9,9 +9,14 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $frontendDir = Join-Path $scriptDir "frontend"
 
 function Get-NodeExecutable {
-  $candidates = @(
-    (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.14.0-win-x64\\node.exe")
-  )
+  $candidates = @()
+
+  $wingetRoot = Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe"
+  if (Test-Path $wingetRoot) {
+    $candidates += Get-ChildItem -Path $wingetRoot -Directory -Filter "node-v*-win-x64" -ErrorAction SilentlyContinue |
+      Sort-Object Name -Descending |
+      ForEach-Object { Join-Path $_.FullName "node.exe" }
+  }
 
   $onPath = Get-Command node -ErrorAction SilentlyContinue
   if ($onPath) {

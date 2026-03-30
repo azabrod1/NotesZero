@@ -1,0 +1,12 @@
+package com.notesapp.service.aiwrite;
+
+public enum PatchOpType {
+    CREATE_NOTE,
+    RENAME_NOTE,
+    UPDATE_NOTE_SUMMARY,
+    INSERT_SECTION_AFTER,
+    REPLACE_SECTION_CONTENT,
+    APPEND_SECTION_CONTENT,
+    DELETE_SECTION,
+    REPLACE_NOTE_OUTLINE
+}

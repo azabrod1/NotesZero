@@ -38,6 +38,7 @@ public class NotebookService {
                 throw new ValidationException("Notebook already exists: " + existing.getName());
             });
         Notebook notebook = new Notebook(DEFAULT_USER_ID, request.getName().trim(), request.getDescription().trim(), Instant.now());
+        notebook.setRoutingSummary(request.getDescription().trim());
         Notebook saved = notebookRepository.save(notebook);
         return toResponse(saved);
     }
@@ -64,7 +65,9 @@ public class NotebookService {
 
     private void ensureNotebookExists(String name, String description) {
         if (notebookRepository.findByUserIdAndNameIgnoreCase(DEFAULT_USER_ID, name).isEmpty()) {
-            notebookRepository.save(new Notebook(DEFAULT_USER_ID, name, description, Instant.now()));
+            Notebook notebook = new Notebook(DEFAULT_USER_ID, name, description, Instant.now());
+            notebook.setRoutingSummary(description);
+            notebookRepository.save(notebook);
         }
     }
 

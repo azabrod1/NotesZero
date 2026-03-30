@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:file:${NOTES_DATA_DIR:/data}/notes;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE
+    url: jdbc:h2:file:${NOTES_DATA_DIR:/data}/${NOTES_DB_FILE:notes-v2};MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE
     username: sa
     password:
     driver-class-name: org.h2.Driver

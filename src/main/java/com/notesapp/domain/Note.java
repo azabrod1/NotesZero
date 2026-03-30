@@ -34,6 +34,27 @@ public class Note {
     @Column(name = "raw_text", nullable = false, length = 500000)
     private String rawText;
 
+    @Column(nullable = false, length = 200)
+    private String title;
+
+    @Column(name = "summary_short", nullable = false, length = 500)
+    private String summaryShort;
+
+    @Column(name = "note_type", nullable = false, length = 64)
+    private String noteType;
+
+    @Column(name = "schema_version", nullable = false, length = 32)
+    private String schemaVersion;
+
+    @Column(name = "document_json", nullable = false, length = 500000)
+    private String documentJson;
+
+    @Column(name = "editor_state_json", nullable = false, length = 500000)
+    private String editorStateJson;
+
+    @Column(name = "current_revision_id")
+    private Long currentRevisionId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false, length = 16)
     private SourceType sourceType;
@@ -94,6 +115,62 @@ public class Note {
         this.rawText = rawText;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getSummaryShort() {
+        return summaryShort;
+    }
+
+    public void setSummaryShort(String summaryShort) {
+        this.summaryShort = summaryShort;
+    }
+
+    public String getNoteType() {
+        return noteType;
+    }
+
+    public void setNoteType(String noteType) {
+        this.noteType = noteType;
+    }
+
+    public String getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(String schemaVersion) {
+        this.schemaVersion = schemaVersion;
+    }
+
+    public String getDocumentJson() {
+        return documentJson;
+    }
+
+    public void setDocumentJson(String documentJson) {
+        this.documentJson = documentJson;
+    }
+
+    public String getEditorStateJson() {
+        return editorStateJson;
+    }
+
+    public void setEditorStateJson(String editorStateJson) {
+        this.editorStateJson = editorStateJson;
+    }
+
+    public Long getCurrentRevisionId() {
+        return currentRevisionId;
+    }
+
+    public void setCurrentRevisionId(Long currentRevisionId) {
+        this.currentRevisionId = currentRevisionId;
+    }
+
     public SourceType getSourceType() {
         return sourceType;
     }
@@ -134,4 +211,3 @@ public class Note {
         this.updatedAt = updatedAt;
     }
 }
-

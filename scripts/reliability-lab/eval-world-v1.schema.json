@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvalWorldV1",
+  "type": "object",
+  "required": ["schemaVersion", "worldId", "title", "notebooks", "notes", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "EvalWorldV1" },
+    "worldId": { "type": "string" },
+    "title": { "type": "string" },
+    "namespace": { "type": "string" },
+    "notebooks": { "type": "array", "items": { "type": "object" } },
+    "notes": { "type": "array", "items": { "type": "object" } },
+    "cases": { "type": "array", "items": { "type": "object" } }
+  },
+  "additionalProperties": true
+}

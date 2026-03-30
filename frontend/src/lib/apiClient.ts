@@ -1,23 +1,19 @@
 import {
-  ClarificationTask,
+  CommitChatResponse,
   Note,
   NoteMutationPayload,
   Notebook,
-  QueryResponse,
-  SourceType
+  NoteSummary,
+  RevisionHistoryEntry,
+  UndoResult
 } from "./types";
 
-interface CreateNotePayload extends NoteMutationPayload {
-  sourceType: SourceType;
-}
-
-interface ResolveClarificationPayload {
-  selectedOption: string;
-}
-
-interface AskPayload {
-  notebookId: number;
-  question: string;
+interface CommitChatPayload {
+  message: string;
+  selectedNotebookId?: number | null;
+  selectedNoteId?: number | null;
+  recentChatEventIds?: number[];
+  currentRevisionId?: number | null;
 }
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -27,7 +23,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const payload = await response.text();
 
   if (!response.ok) {
-    throw new Error(payload || `${response.status} ${response.statusText}`);
+    if (payload) {
+      try {
+        const parsed = JSON.parse(payload) as { message?: string };
+        throw new Error(parsed.message || payload);
+      } catch {
+        throw new Error(payload);
+      }
+    }
+    throw new Error(`${response.status} ${response.statusText}`);
   }
 
   if (!payload) {
@@ -36,33 +40,34 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     return JSON.parse(payload) as T;
-  } catch (error) {
-    throw new Error(
-      `Server returned non-JSON payload for ${path}. ` +
-        "Check that the API is running and reachable from this site."
-    );
+  } catch {
+    throw new Error(`Server returned non-JSON payload for ${path}.`);
   }
 }
 
 export const apiClient = {
   listNotebooks(): Promise<Notebook[]> {
-    return request<Notebook[]>("/api/v1/notebooks");
+    return request<Notebook[]>("/api/v2/notebooks");
   },
 
   createNotebook(payload: { name: string; description: string }): Promise<Notebook> {
-    return request<Notebook>("/api/v1/notebooks", {
+    return request<Notebook>("/api/v2/notebooks", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     });
   },
 
-  listNotes(notebookId: number): Promise<Note[]> {
-    return request<Note[]>(`/api/v1/notes?notebookId=${encodeURIComponent(notebookId)}`);
+  listNotes(notebookId: number): Promise<NoteSummary[]> {
+    return request<NoteSummary[]>(`/api/v2/notes?notebookId=${encodeURIComponent(notebookId)}`);
   },
 
-  createNote(payload: CreateNotePayload): Promise<Note> {
-    return request<Note>("/api/v1/notes", {
+  getNote(noteId: number): Promise<Note> {
+    return request<Note>(`/api/v2/notes/${noteId}`);
+  },
+
+  createNote(payload: NoteMutationPayload): Promise<Note> {
+    return request<Note>("/api/v2/notes", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
@@ -70,30 +75,34 @@ export const apiClient = {
   },
 
   updateNote(noteId: number, payload: NoteMutationPayload): Promise<Note> {
-    return request<Note>(`/api/v1/notes/${noteId}`, {
+    return request<Note>(`/api/v2/notes/${noteId}`, {
       method: "PUT",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     });
   },
 
-  listClarifications(): Promise<ClarificationTask[]> {
-    return request<ClarificationTask[]>("/api/v1/clarifications");
-  },
-
-  resolveClarification(taskId: number, payload: ResolveClarificationPayload): Promise<Note> {
-    return request<Note>(`/api/v1/clarifications/${taskId}/resolve`, {
+  commitChat(payload: CommitChatPayload): Promise<CommitChatResponse> {
+    return request<CommitChatResponse>("/api/v2/chat-events/commit", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     });
   },
 
-  askNotebook(payload: AskPayload): Promise<QueryResponse> {
-    return request<QueryResponse>("/api/v1/query", {
-      method: "POST",
-      headers: JSON_HEADERS,
-      body: JSON.stringify(payload)
+  history(noteId: number): Promise<RevisionHistoryEntry[]> {
+    return request<RevisionHistoryEntry[]>(`/api/v2/notes/${noteId}/history`);
+  },
+
+  undo(noteId: number, operationId: number): Promise<UndoResult> {
+    return request<UndoResult>(`/api/v2/notes/${noteId}/undo?operationId=${encodeURIComponent(operationId)}`, {
+      method: "POST"
+    });
+  },
+
+  recomputeSummary(noteId: number): Promise<Note> {
+    return request<Note>(`/api/v2/notes/${noteId}/recompute-summary`, {
+      method: "POST"
     });
   }
 };

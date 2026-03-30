@@ -12,6 +12,16 @@ public class AiProperties {
     private double monthlyBudgetGbp = 50.0;
     private String anthropicApiKey = "";
     private String openAiApiKey = "";
+    private double routeAutoApplyThreshold = 0.62;
+    private String routerModel = "gpt-5-mini-2025-08-07";
+    private String plannerModel = "gpt-5.4-2026-03-05";
+    private String summaryModel = "gpt-5-mini-2025-08-07";
+    private String routerPromptId = "";
+    private String plannerPromptId = "";
+    private String summaryPromptId = "";
+    private String openAiBaseUrl = "https://api.openai.com/v1";
+    private int chatCommitRateLimitCount = 100;
+    private int chatCommitRateLimitWindowMinutes = 30;
 
     public String getProvider() {
         return provider;
@@ -51,5 +61,85 @@ public class AiProperties {
 
     public void setOpenAiApiKey(String openAiApiKey) {
         this.openAiApiKey = openAiApiKey;
+    }
+
+    public double getRouteAutoApplyThreshold() {
+        return routeAutoApplyThreshold;
+    }
+
+    public void setRouteAutoApplyThreshold(double routeAutoApplyThreshold) {
+        this.routeAutoApplyThreshold = routeAutoApplyThreshold;
+    }
+
+    public String getRouterModel() {
+        return routerModel;
+    }
+
+    public void setRouterModel(String routerModel) {
+        this.routerModel = routerModel;
+    }
+
+    public String getPlannerModel() {
+        return plannerModel;
+    }
+
+    public void setPlannerModel(String plannerModel) {
+        this.plannerModel = plannerModel;
+    }
+
+    public String getSummaryModel() {
+        return summaryModel;
+    }
+
+    public void setSummaryModel(String summaryModel) {
+        this.summaryModel = summaryModel;
+    }
+
+    public String getRouterPromptId() {
+        return routerPromptId;
+    }
+
+    public void setRouterPromptId(String routerPromptId) {
+        this.routerPromptId = routerPromptId;
+    }
+
+    public String getPlannerPromptId() {
+        return plannerPromptId;
+    }
+
+    public void setPlannerPromptId(String plannerPromptId) {
+        this.plannerPromptId = plannerPromptId;
+    }
+
+    public String getSummaryPromptId() {
+        return summaryPromptId;
+    }
+
+    public void setSummaryPromptId(String summaryPromptId) {
+        this.summaryPromptId = summaryPromptId;
+    }
+
+    public String getOpenAiBaseUrl() {
+        return openAiBaseUrl;
+    }
+
+    public void setOpenAiBaseUrl(String openAiBaseUrl) {
+        this.openAiBaseUrl = openAiBaseUrl;
+    }
+
+    public int getChatCommitRateLimitCount() {
+        return chatCommitRateLimitCount;
+    }
+
+    public void setChatCommitRateLimitCount(int chatCommitRateLimitCount) {
+        this.chatCommitRateLimitCount = chatCommitRateLimitCount;
+    }
+
+    public int getChatCommitRateLimitWindowMinutes() {
+        return chatCommitRateLimitWindowMinutes;
+    }
+
+    public void setChatCommitRateLimitWindowMinutes(int chatCommitRateLimitWindowMinutes) {
+        this.chatCommitRateLimitWindowMinutes = chatCommitRateLimitWindowMinutes;
     }
 }

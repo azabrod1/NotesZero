@@ -1,6 +1,7 @@
 package com.notesapp.web;
 
 import com.notesapp.service.NotFoundException;
+import com.notesapp.service.RateLimitExceededException;
 import com.notesapp.service.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,18 @@ public class ApiExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return error(HttpStatus.BAD_GATEWAY, ex.getMessage());
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimit(RateLimitExceededException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+            .body(errorBody(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleSpringValidation(MethodArgumentNotValidException ex) {
         StringBuilder builder = new StringBuilder("Validation failed: ");
@@ -41,11 +54,15 @@ public class ApiExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(errorBody(status, message));
+    }
+
+    private Map<String, Object> errorBody(HttpStatus status, String message) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", Instant.now().toString());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
-        return ResponseEntity.status(status).body(body);
+        return body;
     }
 }

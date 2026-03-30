@@ -2,5 +2,6 @@ package com.notesapp.domain.enums;
 
 public enum NoteStatus {
     READY,
-    NEEDS_CLARIFICATION
+    NEEDS_CLARIFICATION,
+    SYSTEM_HIDDEN
 }

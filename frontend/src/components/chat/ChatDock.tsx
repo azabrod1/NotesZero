@@ -1,33 +1,25 @@
 import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { useEffect, useRef } from "react";
-import type { ChatMessage as ChatMessageType, ChatMode } from "../../lib/types";
+import type { ChatMessage as ChatMessageType } from "../../lib/types";
 import { ChatComposer } from "./ChatComposer";
 import styles from "./ChatDock.module.css";
 import { ChatMessage } from "./ChatMessage";
 
 interface ChatDockProps {
   messages: ChatMessageType[];
-  mode: ChatMode;
   minimized: boolean;
   busy: boolean;
-  onModeChange: (mode: ChatMode) => void;
   onSubmit: (text: string) => void;
+  onUndo: (noteId: number, operationId: number) => void;
   onToggleMinimized: () => void;
 }
 
-const MODES: { key: ChatMode; label: string }[] = [
-  { key: "capture", label: "Jot" },
-  { key: "query", label: "Ask" },
-  { key: "edit", label: "Edit" }
-];
-
 export function ChatDock({
   messages,
-  mode,
   minimized,
   busy,
-  onModeChange,
   onSubmit,
+  onUndo,
   onToggleMinimized
 }: ChatDockProps) {
   const threadRef = useRef<HTMLDivElement>(null);
@@ -48,17 +40,6 @@ export function ChatDock({
             <MessageSquare size={14} className={styles.chatLabelIcon} />
             Chat
           </span>
-          <div className={styles.modes}>
-            {MODES.map((m) => (
-              <button
-                key={m.key}
-                className={`${styles.modeChip} ${mode === m.key ? styles.modeChipActive : ""}`}
-                onClick={() => onModeChange(m.key)}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
         </div>
         <button
           className={styles.toggleBtn}
@@ -73,10 +54,10 @@ export function ChatDock({
         <>
           <div className={styles.thread} ref={threadRef}>
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage key={msg.id} message={msg} onUndo={onUndo} />
             ))}
           </div>
-          <ChatComposer mode={mode} busy={busy} onSubmit={onSubmit} />
+          <ChatComposer busy={busy} onSubmit={onSubmit} />
         </>
       )}
     </div>

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatDock } from "../components/chat/ChatDock";
-import { ClarificationBanner } from "../components/ClarificationBanner";
 import { NoteEditor } from "../components/editor/NoteEditor";
 import { PageTabBar } from "../components/layout/PageTabBar";
 import { Sidebar } from "../components/layout/Sidebar";
@@ -8,87 +7,125 @@ import { TopBar } from "../components/layout/TopBar";
 import { useTheme } from "../hooks/useTheme";
 import { apiClient } from "../lib/apiClient";
 import { isBlockNoteEmpty } from "../lib/textUtils";
-import type { ChatMessage, ChatMode, ClarificationTask, Note, Notebook } from "../lib/types";
+import type { ChatMessage, CommitChatResponse, Note, NoteSummary, Notebook } from "../lib/types";
 import styles from "./App.module.css";
 
 function msgId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function createGenericDraftJson(): string {
+  return "[]";
+}
+
+function isSystemInboxTitle(title?: string | null): boolean {
+  return (title ?? "").trim().toLowerCase() === "inbox";
+}
+
+function isHiddenInboxCommit(result: CommitChatResponse): boolean {
+  return Boolean(result.patchPlan.fallbackToInbox && isSystemInboxTitle(result.updatedNote?.title));
+}
+
+function assistantSummary(result: CommitChatResponse): string {
+  if (result.answer) {
+    return result.answer;
+  }
+  if (!result.updatedNote || !result.applyResult) {
+    return "No note changes were applied.";
+  }
+  if (isHiddenInboxCommit(result)) {
+    return `Queued this in ${result.updatedNote.notebookName ?? "the selected notebook"} for later organization.`;
+  }
+  if (result.patchPlan.fallbackToInbox) {
+    return `Queued this in "${result.updatedNote.title}" for later organization.`;
+  }
+  const sectionCount = result.applyResult.changedSectionIds.length;
+  const sectionText = sectionCount === 1 ? "1 section" : `${sectionCount} sections`;
+  return `Updated "${result.updatedNote.title}" in ${result.updatedNote.notebookName ?? "the selected notebook"} and changed ${sectionText}.`;
+}
+
 export function App() {
   const { theme, toggleTheme } = useTheme();
 
-  /* ── data state ── */
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [activeNotebookId, setActiveNotebookId] = useState<number | null>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<NoteSummary[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [draftMode, setDraftMode] = useState(false);
   const [editorValue, setEditorValue] = useState("[]");
   const [isDirty, setIsDirty] = useState(false);
-  const [clarifications, setClarifications] = useState<ClarificationTask[]>([]);
 
-  /* ── ui state ── */
   const [busy, setBusy] = useState(false);
   const [statusLine, setStatusLine] = useState("Ready.");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  /* ── chat state ── */
-  const [chatMode, setChatMode] = useState<ChatMode>("capture");
   const [chatMinimized, setChatMinimized] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: msgId(),
       role: "assistant",
-      mode: "capture",
-      content: "Jot down ideas, ask your notebook anything, or make quick edits.",
+      content: "Message a thought, edit request, or question. NotesZero will route it, patch the note, and keep an undo trail.",
       createdAt: new Date().toISOString()
     }
   ]);
 
-  /* ── derived ── */
   const activeNotebook = useMemo(
     () => notebooks.find((nb) => nb.id === activeNotebookId) ?? null,
     [activeNotebookId, notebooks]
   );
+  const selectedNoteIdRef = useRef<number | null>(null);
+  const draftModeRef = useRef(false);
+  const loadSequenceRef = useRef(0);
+  const loadedEditorValueRef = useRef("[]");
 
-  const selectedNote = useMemo(
-    () => notes.find((n) => n.id === selectedNoteId) ?? null,
-    [notes, selectedNoteId]
-  );
-
-  /* ── editor key for re-mount on note switch ── */
   const editorKey = useMemo(() => {
     if (draftMode) return "draft";
-    if (selectedNoteId !== null) return `note-${selectedNoteId}`;
+    if (selectedNoteId !== null) return `note-${selectedNoteId}-${selectedNote?.currentRevisionId ?? 0}`;
     return "empty";
-  }, [draftMode, selectedNoteId]);
+  }, [draftMode, selectedNote?.currentRevisionId, selectedNoteId]);
 
-  /* ── bootstrap ── */
   useEffect(() => {
     void bootstrap();
   }, []);
 
   useEffect(() => {
-    if (activeNotebookId !== null) void refreshNotebook(activeNotebookId);
+    if (activeNotebookId !== null) {
+      void refreshNotebook(activeNotebookId);
+    }
   }, [activeNotebookId]);
 
   useEffect(() => {
-    if (draftMode) return;
+    if (draftMode || selectedNoteId === null) {
+      return;
+    }
+    void loadNote(selectedNoteId);
+  }, [selectedNoteId, draftMode]);
+
+  useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId;
+  }, [selectedNoteId]);
+
+  useEffect(() => {
+    draftModeRef.current = draftMode;
+  }, [draftMode]);
+
+  useEffect(() => {
+    if (draftMode) {
+      return;
+    }
     if (selectedNote) {
-      setEditorValue(selectedNote.rawText ?? "[]");
+      loadedEditorValueRef.current = selectedNote.editorContent ?? "[]";
+      setEditorValue(loadedEditorValueRef.current);
       setIsDirty(false);
       return;
     }
-    if (notes.length > 0) {
-      setSelectedNoteId(notes[0].id);
-      return;
+    if (selectedNoteId === null) {
+      loadedEditorValueRef.current = "[]";
+      setEditorValue("[]");
+      setIsDirty(false);
     }
-    setEditorValue("[]");
-    setSelectedNoteId(null);
-  }, [selectedNote, notes, draftMode]);
+  }, [selectedNote, selectedNoteId, draftMode]);
 
-  /* ── keyboard shortcuts ── */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -100,60 +137,73 @@ export function App() {
     return () => window.removeEventListener("keydown", handler);
   });
 
-  /* ── api helpers ── */
   const bootstrap = async () => {
     setBusy(true);
     try {
-      const [nbs, cls] = await Promise.all([
-        apiClient.listNotebooks(),
-        apiClient.listClarifications()
-      ]);
+      const nbs = await apiClient.listNotebooks();
       setNotebooks(nbs);
-      setClarifications(cls);
-      if (nbs.length > 0) setActiveNotebookId(nbs[0].id);
+      if (nbs.length > 0) {
+        setActiveNotebookId(nbs[0].id);
+      }
       setStatusLine("Workspace loaded.");
     } catch (err) {
-      setStatusLine(`Failed to load: ${(err as Error).message}`);
+      setStatusLine(`Failed to load workspace: ${(err as Error).message}`);
     } finally {
       setBusy(false);
     }
   };
 
-  const refreshNotebook = async (nbId: number) => {
-    setBusy(true);
-    try {
-      const [noteItems, cls] = await Promise.all([
-        apiClient.listNotes(nbId),
-        apiClient.listClarifications()
-      ]);
-      setNotes(noteItems);
-      setClarifications(cls);
-      if (!draftMode && noteItems.length > 0) {
-        const exists = selectedNoteId !== null && noteItems.some((n) => n.id === selectedNoteId);
-        if (!exists) setSelectedNoteId(noteItems[0].id);
+  const refreshNotebook = async (notebookId: number, preferredNoteId?: number | null) => {
+    const noteItems = await apiClient.listNotes(notebookId);
+    setNotes(noteItems);
+    if (!draftModeRef.current) {
+      const resolvedPreferredNoteId = preferredNoteId ?? selectedNoteIdRef.current;
+      if (noteItems.length === 0) {
+        setSelectedNoteId(null);
+        setSelectedNote(null);
+      } else if (
+        resolvedPreferredNoteId === null ||
+        !noteItems.some((note) => note.id === resolvedPreferredNoteId)
+      ) {
+        setSelectedNote(null);
+        setSelectedNoteId(noteItems[0].id);
       }
+    }
+  };
+
+  const loadNote = async (noteId: number) => {
+    const requestId = ++loadSequenceRef.current;
+    try {
+      const note = await apiClient.getNote(noteId);
+      if (
+        requestId !== loadSequenceRef.current ||
+        draftModeRef.current ||
+        selectedNoteIdRef.current !== noteId
+      ) {
+        return;
+      }
+      setSelectedNote(note);
     } catch (err) {
-      setStatusLine(`Failed to load notebook: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
+      setStatusLine(`Failed to load note: ${(err as Error).message}`);
     }
   };
 
   const createNotebook = useCallback(async () => {
     const name = window.prompt("Notebook name:");
     if (!name?.trim()) return;
-    const description = window.prompt("Short description:") ?? "";
+    const description = window.prompt("Short routing description:") ?? "";
     setBusy(true);
     try {
-      const nb = await apiClient.createNotebook({
+      const notebook = await apiClient.createNotebook({
         name: name.trim(),
         description: description.trim() || name.trim()
       });
-      setNotebooks((prev) => [...prev, nb]);
-      setActiveNotebookId(nb.id);
-      setDraftMode(false);
+      setNotebooks((prev) => [...prev, notebook]);
+      setActiveNotebookId(notebook.id);
       setSelectedNoteId(null);
-      setStatusLine(`Created notebook "${nb.name}".`);
+      setSelectedNote(null);
+      setDraftMode(false);
+      setStatusLine(`Created notebook "${notebook.name}".`);
     } catch (err) {
       setStatusLine(`Failed to create notebook: ${(err as Error).message}`);
     } finally {
@@ -164,20 +214,10 @@ export function App() {
   const createDraftPage = useCallback(() => {
     setDraftMode(true);
     setSelectedNoteId(null);
-    setEditorValue(JSON.stringify([
-      {
-        type: "heading",
-        props: { level: 1 },
-        content: [{ type: "text", text: "Untitled page", styles: {} }],
-        children: []
-      },
-      {
-        type: "paragraph",
-        content: [],
-        children: []
-      }
-    ]));
-    setIsDirty(true);
+    setSelectedNote(null);
+    setEditorValue(createGenericDraftJson());
+    loadedEditorValueRef.current = createGenericDraftJson();
+    setIsDirty(false);
   }, []);
 
   const savePage = async () => {
@@ -186,30 +226,36 @@ export function App() {
       return;
     }
     if (isBlockNoteEmpty(editorValue)) {
-      setStatusLine("Cannot save an empty page.");
+      setStatusLine("Cannot save an empty note.");
       return;
     }
+
     setBusy(true);
     try {
       if (draftMode || selectedNoteId === null) {
         const created = await apiClient.createNote({
-          rawText: editorValue,
-          sourceType: "TEXT",
-          notebookId: activeNotebookId
+          notebookId: activeNotebookId,
+          noteType: "generic_note/v1",
+          editorContent: editorValue
         });
         setDraftMode(false);
         setSelectedNoteId(created.id);
-        setStatusLine(`Page created in ${activeNotebook?.name ?? "notebook"}.`);
+        setSelectedNote(created);
+        loadedEditorValueRef.current = created.editorContent;
+        setStatusLine(`Created "${created.title}".`);
+        await refreshNotebook(activeNotebookId, created.id);
       } else {
-        await apiClient.updateNote(selectedNoteId, {
-          rawText: editorValue,
+        const updated = await apiClient.updateNote(selectedNoteId, {
           notebookId: activeNotebookId,
-          occurredAt: selectedNote?.occurredAt ?? null
+          editorContent: editorValue,
+          currentRevisionId: selectedNote?.currentRevisionId ?? null
         });
-        setStatusLine("Page saved.");
+        setSelectedNote(updated);
+        loadedEditorValueRef.current = updated.editorContent;
+        setStatusLine("Note saved.");
+        await refreshNotebook(activeNotebookId, updated.id);
       }
       setIsDirty(false);
-      await refreshNotebook(activeNotebookId);
     } catch (err) {
       setStatusLine(`Save failed: ${(err as Error).message}`);
     } finally {
@@ -217,97 +263,86 @@ export function App() {
     }
   };
 
-  const resolveClarification = async (taskId: number, selectedOption: string) => {
-    setBusy(true);
-    try {
-      await apiClient.resolveClarification(taskId, { selectedOption });
-      if (activeNotebookId !== null) await refreshNotebook(activeNotebookId);
-      setStatusLine("Clarification resolved.");
-    } catch (err) {
-      setStatusLine(`Clarification failed: ${(err as Error).message}`);
-    } finally {
-      setBusy(false);
+  const pushMessage = (message: ChatMessage) => {
+    setChatMessages((prev) => [...prev, message]);
+  };
+
+  const recentChatEventIds = (): number[] =>
+    chatMessages
+      .map((message) => message.commit?.chatEventId ?? null)
+      .filter((value): value is number => value !== null)
+      .slice(-3);
+
+  const syncUpdatedNote = async (note: Note) => {
+    if (isSystemInboxTitle(note.title)) {
+      if (note.notebookId != null && note.notebookId === activeNotebookId) {
+        await refreshNotebook(note.notebookId, selectedNoteIdRef.current);
+      }
+      return;
+    }
+    setDraftMode(false);
+    setSelectedNoteId(note.id);
+    setSelectedNote(note);
+    setEditorValue(note.editorContent);
+    loadedEditorValueRef.current = note.editorContent;
+    setIsDirty(false);
+
+    if (note.notebookId) {
+      setActiveNotebookId(note.notebookId);
+      await refreshNotebook(note.notebookId, note.id);
     }
   };
 
-  /* ── chat ── */
-  const pushMsg = (msg: ChatMessage) => setChatMessages((prev) => [...prev, msg]);
-
   const submitChat = async (text: string) => {
-    pushMsg({
-      id: msgId(), role: "user", mode: chatMode,
-      content: text, createdAt: new Date().toISOString()
+    pushMessage({
+      id: msgId(),
+      role: "user",
+      content: text,
+      createdAt: new Date().toISOString()
     });
 
     if (activeNotebookId === null) {
-      pushMsg({
-        id: msgId(), role: "assistant", mode: chatMode,
-        content: "Select a notebook first.", createdAt: new Date().toISOString()
+      pushMessage({
+        id: msgId(),
+        role: "assistant",
+        content: "Select a notebook first.",
+        createdAt: new Date().toISOString()
       });
       return;
     }
 
     setBusy(true);
     try {
-      if (chatMode === "capture") {
-        const created = await apiClient.createNote({
-          rawText: text, sourceType: "TEXT", notebookId: activeNotebookId
-        });
-        await refreshNotebook(activeNotebookId);
-        setStatusLine("Saved as a new page.");
-        pushMsg({
-          id: msgId(), role: "assistant", mode: chatMode,
-          content: `Saved to ${created.notebookName ?? activeNotebook?.name ?? "notebook"}.`,
-          createdAt: new Date().toISOString()
-        });
-      } else if (chatMode === "query") {
-        const answer = await apiClient.askNotebook({ notebookId: activeNotebookId, question: text });
-        pushMsg({
-          id: msgId(), role: "assistant", mode: chatMode,
-          content: `${answer.answer}\nSources: ${answer.citedNoteIds.join(", ") || "none"}`,
-          createdAt: new Date().toISOString()
-        });
-        setStatusLine("Query answered.");
-      } else {
-        if (!selectedNoteId) {
-          pushMsg({
-            id: msgId(), role: "assistant", mode: chatMode,
-            content: "Open or create a page before using edit mode.",
-            createdAt: new Date().toISOString()
-          });
-          return;
-        }
-        // Append a paragraph block to the current BlockNote JSON
-        let currentBlocks: unknown[];
-        try {
-          currentBlocks = JSON.parse(editorValue);
-        } catch {
-          currentBlocks = [];
-        }
-        const newBlock = {
-          type: "paragraph",
-          content: [{ type: "text", text: text, styles: {} }],
-          children: []
-        };
-        const updatedJson = JSON.stringify([...currentBlocks, newBlock]);
-        await apiClient.updateNote(selectedNoteId, {
-          rawText: updatedJson,
-          notebookId: activeNotebookId,
-          occurredAt: selectedNote?.occurredAt ?? null
-        });
-        setEditorValue(updatedJson);
-        setIsDirty(false);
-        await refreshNotebook(activeNotebookId);
-        pushMsg({
-          id: msgId(), role: "assistant", mode: chatMode,
-          content: "Added that to the current page.",
-          createdAt: new Date().toISOString()
-        });
-        setStatusLine("Page updated from chat.");
+      const result = await apiClient.commitChat({
+        message: text,
+        selectedNotebookId: activeNotebookId,
+        selectedNoteId: draftMode ? null : selectedNoteId,
+        recentChatEventIds: recentChatEventIds(),
+        currentRevisionId: draftMode ? null : selectedNote?.currentRevisionId ?? null
+      });
+
+      if (result.updatedNote) {
+        await syncUpdatedNote(result.updatedNote);
       }
+
+      pushMessage({
+        id: msgId(),
+        role: "assistant",
+        content: assistantSummary(result),
+        createdAt: new Date().toISOString(),
+        commit: result,
+        undo: result.updatedNote && result.undoToken
+          ? {
+              noteId: result.updatedNote.id,
+              operationId: Number(result.undoToken)
+            }
+          : null
+      });
+      setStatusLine(result.answer ? "Answer ready." : result.applyResult?.outcome ?? "Chat handled.");
     } catch (err) {
-      pushMsg({
-        id: msgId(), role: "assistant", mode: chatMode,
+      pushMessage({
+        id: msgId(),
+        role: "assistant",
         content: `Request failed: ${(err as Error).message}`,
         createdAt: new Date().toISOString()
       });
@@ -317,14 +352,38 @@ export function App() {
     }
   };
 
-  /* ── render ── */
+  const undoOperation = async (noteId: number, operationId: number) => {
+    setBusy(true);
+    try {
+      const result = await apiClient.undo(noteId, operationId);
+      await syncUpdatedNote(result.updatedNote);
+      pushMessage({
+        id: msgId(),
+        role: "assistant",
+        content: `Undo restored the previous revision of "${result.updatedNote.title}".`,
+        createdAt: new Date().toISOString()
+      });
+      setStatusLine("Undo applied.");
+    } catch (err) {
+      pushMessage({
+        id: msgId(),
+        role: "assistant",
+        content: `Undo failed: ${(err as Error).message}`,
+        createdAt: new Date().toISOString()
+      });
+      setStatusLine(`Undo failed: ${(err as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className={styles.root}>
       <TopBar
         notebookName={activeNotebook?.name ?? null}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+        onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}
         statusText={isDirty ? "Unsaved changes" : statusLine}
       />
 
@@ -337,6 +396,10 @@ export function App() {
             setDraftMode(false);
             setActiveNotebookId(id);
             setSelectedNoteId(null);
+            setSelectedNote(null);
+            loadedEditorValueRef.current = "[]";
+            setEditorValue("[]");
+            setIsDirty(false);
           }}
           onCreateNotebook={createNotebook}
         />
@@ -347,15 +410,20 @@ export function App() {
             selectedNoteId={selectedNoteId}
             draftMode={draftMode}
             onSelectNote={(id) => {
+              if (!draftMode && selectedNoteId === id) {
+                if (selectedNote === null) {
+                  void loadNote(id);
+                }
+                return;
+              }
               setDraftMode(false);
+              setSelectedNote(null);
               setSelectedNoteId(id);
+              loadedEditorValueRef.current = "[]";
+              setEditorValue("[]");
+              setIsDirty(false);
             }}
             onCreatePage={createDraftPage}
-          />
-
-          <ClarificationBanner
-            tasks={clarifications}
-            onResolve={resolveClarification}
           />
 
           <div className={styles.editorArea}>
@@ -364,7 +432,7 @@ export function App() {
               initialContent={editorValue}
               onChange={(json) => {
                 setEditorValue(json);
-                setIsDirty(true);
+                setIsDirty(json !== loadedEditorValueRef.current);
               }}
               placeholder="Start writing your note..."
               theme={theme}
@@ -373,12 +441,11 @@ export function App() {
 
           <ChatDock
             messages={chatMessages}
-            mode={chatMode}
             minimized={chatMinimized}
             busy={busy}
-            onModeChange={setChatMode}
             onSubmit={submitChat}
-            onToggleMinimized={() => setChatMinimized((c) => !c)}
+            onUndo={undoOperation}
+            onToggleMinimized={() => setChatMinimized((collapsed) => !collapsed)}
           />
         </main>
       </div>

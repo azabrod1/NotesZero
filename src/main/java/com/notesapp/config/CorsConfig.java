@@ -13,7 +13,7 @@ public class CorsConfig {
 
     @Bean
     public WebMvcConfigurer corsConfigurer(
-        @Value("${notes.cors.allowed-origin-patterns:http://localhost:3000,http://localhost:5173,https://*.up.railway.app}") String allowedOriginPatterns
+        @Value("${notes.cors.allowed-origin-patterns:http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173,https://*.up.railway.app}") String allowedOriginPatterns
     ) {
         String[] patterns = Arrays.stream(allowedOriginPatterns.split(","))
             .map(String::trim)

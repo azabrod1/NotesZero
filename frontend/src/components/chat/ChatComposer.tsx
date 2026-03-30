@@ -1,21 +1,13 @@
 import { SendHorizontal } from "lucide-react";
 import { useRef, useState } from "react";
-import type { ChatMode } from "../../lib/types";
 import styles from "./ChatComposer.module.css";
 
 interface ChatComposerProps {
-  mode: ChatMode;
   busy: boolean;
   onSubmit: (text: string) => void;
 }
 
-const PLACEHOLDER: Record<ChatMode, string> = {
-  capture: "Jot down a thought...",
-  query: "Ask your notebook a question...",
-  edit: "Describe an edit to the current page..."
-};
-
-export function ChatComposer({ mode, busy, onSubmit }: ChatComposerProps) {
+export function ChatComposer({ busy, onSubmit }: ChatComposerProps) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,9 +44,10 @@ export function ChatComposer({ mode, busy, onSubmit }: ChatComposerProps) {
           value={text}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={PLACEHOLDER[mode]}
+          placeholder="Message NotesZero to write, route, or answer from your notes..."
           rows={1}
           disabled={busy}
+          data-testid="chat-input"
         />
       </div>
       <button
