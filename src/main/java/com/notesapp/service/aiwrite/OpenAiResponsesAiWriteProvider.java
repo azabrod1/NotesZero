@@ -59,7 +59,7 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     public RouteDecision routeWithTrace(RouteRequestContext context) {
         StructuredInvocationResult<RoutePlanV1> raw = invokeStructured(
             aiProperties.getRouterModel(),
-            "minimal",
+            "low",
             OpenAiWritePrompts.routeInstructions(),
             OpenAiWritePrompts.routeInput(context),
             "noteszero_route_plan_v1",
@@ -127,7 +127,7 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     public NoteSummaryResult summarize(NoteDocumentV1 document) {
         StructuredInvocationResult<NoteSummaryResult> raw = invokeStructured(
             aiProperties.getSummaryModel(),
-            "minimal",
+            "low",
             OpenAiWritePrompts.summaryInstructions(),
             OpenAiWritePrompts.summaryInput(document),
             "noteszero_note_summary_v1",
