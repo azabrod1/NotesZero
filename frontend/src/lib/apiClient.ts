@@ -18,8 +18,15 @@ interface CommitChatPayload {
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE_URL = RAW_API_BASE_URL ? RAW_API_BASE_URL.replace(/\/$/, "") : "";
+
+function buildUrl(path: string): string {
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, init);
+  const response = await fetch(buildUrl(path), init);
   const payload = await response.text();
 
   if (!response.ok) {
