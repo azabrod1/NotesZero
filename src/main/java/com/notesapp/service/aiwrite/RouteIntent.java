@@ -4,5 +4,6 @@ public enum RouteIntent {
     WRITE_EXISTING_NOTE,
     CREATE_NOTE,
     ANSWER_ONLY,
-    CLARIFY
+    CLARIFY,
+    NEED_MORE_CONTEXT
 }

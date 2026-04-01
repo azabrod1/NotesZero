@@ -81,6 +81,7 @@ export function Sidebar({
 
         {notebooks.length > 0 && (
           <select
+            data-testid="notebook-select"
             className={styles.notebookSelect}
             value={activeNotebookId ?? ""}
             onChange={(e) => {
@@ -155,6 +156,7 @@ export function Sidebar({
             return (
               <motion.button
                 key={note.id}
+                data-testid={`note-tab-${note.id}`}
                 variants={staggerItem}
                 className={`${styles.noteItem} ${isActive ? styles.noteItemActive : ""}`}
                 onClick={() => onSelectNote(note.id)}

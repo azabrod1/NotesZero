@@ -1,0 +1,381 @@
+[
+  {
+    "id": "cat-poop-01",
+    "message": "my cat just pooped",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "recent_updates",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["entity-routing", "pet"]
+    }
+  },
+  {
+    "id": "task-done-01",
+    "message": "finished the deploy script",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "tasks",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "mergeExpectation": "mark existing task complete, not add new",
+      "tags": ["task-update", "work"]
+    }
+  },
+  {
+    "id": "ambiguous-she-01",
+    "message": "she said to call tomorrow",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": null,
+      "noteTitle": null,
+      "intent": "CLARIFY",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": true,
+      "tags": ["ambiguous-pronoun"]
+    }
+  },
+  {
+    "id": "question-status-01",
+    "message": "what's the status on the launch?",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "ANSWER_ONLY",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["question", "work"]
+    }
+  },
+  {
+    "id": "explicit-title-01",
+    "message": "In Deploy Runbook, add that we need to check migration order",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": "Deploy Runbook",
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "body",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["exact-title", "work"]
+    }
+  },
+  {
+    "id": "new-note-01",
+    "message": "Create a note called Vacation Planning with ideas for summer trip",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": "Vacation Planning",
+      "intent": "CREATE_NOTE",
+      "section": "body",
+      "shouldCreateNew": true,
+      "shouldClarify": false,
+      "tags": ["create-note", "personal"]
+    }
+  },
+  {
+    "id": "vague-reminder-01",
+    "message": "remember this for later: compare dog food brands",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": null,
+      "noteTitle": null,
+      "intent": "CREATE_NOTE",
+      "section": "inbox",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["vague-capture", "inbox"]
+    }
+  },
+  {
+    "id": "selected-note-task-01",
+    "message": "add a task to email the vendor tomorrow",
+    "selectedNotebookId": 1,
+    "selectedNoteId": 5,
+    "expected": {
+      "notebookName": null,
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "tasks",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["selected-context", "task"]
+    }
+  },
+  {
+    "id": "wrong-context-01",
+    "message": "mom's birthday is March 15",
+    "selectedNotebookId": null,
+    "selectedNoteId": 99,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["ignore-selected-context", "family", "entity-routing"]
+    }
+  },
+  {
+    "id": "health-observation-01",
+    "message": "Milo threw up twice this morning, seemed lethargic",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "recent_updates",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["entity-routing", "pet", "health"]
+    }
+  },
+  {
+    "id": "multi-entity-01",
+    "message": "tell mom about Milo's vet appointment next Tuesday",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["multi-entity", "family", "pet"]
+    }
+  },
+  {
+    "id": "decision-01",
+    "message": "Decision: we'll use Postgres for the new service instead of DynamoDB",
+    "selectedNotebookId": null,
+    "selectedNoteId": 10,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "decisions",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["selected-context", "decision", "work"]
+    }
+  },
+  {
+    "id": "status-update-01",
+    "message": "current blocker: waiting on API keys from the vendor",
+    "selectedNotebookId": null,
+    "selectedNoteId": 10,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "status",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["selected-context", "status", "work"]
+    }
+  },
+  {
+    "id": "durable-fact-01",
+    "message": "our wifi password is sunflower2024",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["durable-fact", "reference"]
+    }
+  },
+  {
+    "id": "episodic-vs-durable-01",
+    "message": "Luke slept 11 hours last night",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "recent_updates",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["entity-routing", "family", "episodic"]
+    }
+  },
+  {
+    "id": "correction-01",
+    "message": "actually the vet appointment is Wednesday not Tuesday",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "mergeExpectation": "correct existing entry, not append",
+      "tags": ["correction", "merge-update"]
+    }
+  },
+  {
+    "id": "rewrite-request-01",
+    "message": "rewrite this note as a cleaner summary with next steps",
+    "selectedNotebookId": null,
+    "selectedNoteId": 15,
+    "expected": {
+      "notebookName": null,
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["rewrite", "selected-context"]
+    }
+  },
+  {
+    "id": "stale-archived-01",
+    "message": "update on the Q1 budget review",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["stale-note-competition", "work"]
+    }
+  },
+  {
+    "id": "paraphrase-01",
+    "message": "the kitty needs more wet food",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["paraphrase", "pet", "entity-routing"]
+    }
+  },
+  {
+    "id": "link-reference-01",
+    "message": "save this link for the deploy docs: https://docs.railway.app/deploy",
+    "selectedNotebookId": null,
+    "selectedNoteId": 10,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "references",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["selected-context", "link", "reference"]
+    }
+  },
+  {
+    "id": "duplicate-task-01",
+    "message": "add a task to review the PR",
+    "selectedNotebookId": null,
+    "selectedNoteId": 10,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "tasks",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "mergeExpectation": "if task to review PR already exists, do not duplicate",
+      "tags": ["task-dedupe", "work"]
+    }
+  },
+  {
+    "id": "recipe-01",
+    "message": "Grandma's cookie recipe: 2 cups flour, 1 cup sugar, 1 cup butter, 2 eggs, 1 tsp vanilla. Bake at 350 for 12 minutes.",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "personal",
+      "noteTitle": null,
+      "intent": "CREATE_NOTE",
+      "section": "body",
+      "shouldCreateNew": true,
+      "shouldClarify": false,
+      "tags": ["reference-note", "durable-fact", "create-note"]
+    }
+  },
+  {
+    "id": "timeline-event-01",
+    "message": "shipped the onboarding flow to beta users yesterday",
+    "selectedNotebookId": null,
+    "selectedNoteId": 10,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": "timeline",
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["selected-context", "timeline", "work"]
+    }
+  },
+  {
+    "id": "cross-notebook-01",
+    "message": "the work laptop needs a new charger",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": null,
+      "noteTitle": null,
+      "intent": "WRITE_EXISTING_NOTE",
+      "section": null,
+      "shouldCreateNew": false,
+      "shouldClarify": false,
+      "tags": ["cross-notebook-ambiguity"]
+    }
+  },
+  {
+    "id": "project-note-create-01",
+    "message": "start a project note for the API migration",
+    "selectedNotebookId": null,
+    "selectedNoteId": null,
+    "expected": {
+      "notebookName": "work",
+      "noteTitle": "API Migration",
+      "intent": "CREATE_NOTE",
+      "section": null,
+      "shouldCreateNew": true,
+      "shouldClarify": false,
+      "noteType": "project_note/v1",
+      "tags": ["create-note", "project", "work"]
+    }
+  }
+]

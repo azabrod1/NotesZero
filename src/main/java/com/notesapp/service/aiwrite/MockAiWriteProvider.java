@@ -121,7 +121,9 @@ public class MockAiWriteProvider implements AiWriteProvider {
 
     @Override
     public PatchDecision planWithTrace(PatchRequestContext context) {
-        if (context.routePlan().intent() == RouteIntent.ANSWER_ONLY || context.routePlan().intent() == RouteIntent.CLARIFY) {
+        if (context.routePlan().intent() == RouteIntent.ANSWER_ONLY
+            || context.routePlan().intent() == RouteIntent.CLARIFY
+            || context.routePlan().intent() == RouteIntent.NEED_MORE_CONTEXT) {
             return new PatchDecision(new PatchPlanV1(
                 context.routePlan().targetNotebookId(),
                 context.routePlan().targetNoteId(),
@@ -264,6 +266,14 @@ public class MockAiWriteProvider implements AiWriteProvider {
             || normalized.contains("milestone") || normalized.contains("spec")) {
             return CanonicalNoteTemplates.PROJECT_NOTE;
         }
+        if (normalized.contains("entity log") || normalized.contains("entity note")
+            || normalized.contains("person note") || normalized.contains("contact note")) {
+            return CanonicalNoteTemplates.ENTITY_LOG;
+        }
+        if (normalized.contains("reference note") || normalized.contains("reference doc")
+            || normalized.contains("knowledge base")) {
+            return CanonicalNoteTemplates.REFERENCE_NOTE;
+        }
         return CanonicalNoteTemplates.GENERIC_NOTE;
     }
 
@@ -273,7 +283,8 @@ public class MockAiWriteProvider implements AiWriteProvider {
             return "references";
         }
         if (normalized.contains("todo") || normalized.contains("task") || normalized.contains("next action")) {
-            return CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "tasks" : "action_items";
+            return "tasks".equals(defaultContentSection(noteType)) ? "tasks" :
+                CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "tasks" : "action_items";
         }
         if (normalized.contains("decid") || normalized.contains("agreed")) {
             return "decisions";
@@ -285,9 +296,21 @@ public class MockAiWriteProvider implements AiWriteProvider {
             return CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "open_questions" : "body";
         }
         if (containsDate(normalized)) {
-            return CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "timeline" : "body";
+            if (CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType)) return "timeline";
+            if (CanonicalNoteTemplates.ENTITY_LOG.equals(noteType)) return "recent_updates";
+            return "body";
         }
-        return CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "summary" : "body";
+        if (CanonicalNoteTemplates.ENTITY_LOG.equals(noteType)) {
+            return "key_facts";
+        }
+        return defaultContentSection(noteType);
+    }
+
+    private String defaultContentSection(String noteType) {
+        if (CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType)) return "summary";
+        if (CanonicalNoteTemplates.ENTITY_LOG.equals(noteType)) return "key_facts";
+        if (CanonicalNoteTemplates.REFERENCE_NOTE.equals(noteType)) return "body";
+        return "body";
     }
 
     private String fallbackSection(String preferredSectionId, RouteStrategy strategy, String noteType) {
@@ -295,7 +318,7 @@ public class MockAiWriteProvider implements AiWriteProvider {
             return "inbox";
         }
         if (preferredSectionId == null || preferredSectionId.isBlank()) {
-            return CanonicalNoteTemplates.PROJECT_NOTE.equals(noteType) ? "summary" : "body";
+            return defaultContentSection(noteType);
         }
         return preferredSectionId;
     }

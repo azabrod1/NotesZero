@@ -32,6 +32,7 @@ import com.notesapp.service.document.NoteDocumentMeta;
 import com.notesapp.service.document.NoteDocumentV1;
 import com.notesapp.service.document.NoteSection;
 import com.notesapp.service.document.NoteSectionVisibility;
+import com.notesapp.service.routing.IndexRefreshService;
 import com.notesapp.web.dto.v2.NoteSummaryV2Response;
 import com.notesapp.web.dto.v2.NoteV2Response;
 import com.notesapp.web.dto.v2.RevisionHistoryEntryResponse;
@@ -60,6 +61,7 @@ public class NoteWorkflowService {
     private final NoteDocumentCodec noteDocumentCodec;
     private final BlockNoteMapper blockNoteMapper;
     private final ObjectMapper objectMapper;
+    private final IndexRefreshService indexRefreshService;
 
     public NoteWorkflowService(NoteRepository noteRepository,
                                NoteRevisionRepository noteRevisionRepository,
@@ -68,7 +70,8 @@ public class NoteWorkflowService {
                                CanonicalNoteTemplates canonicalNoteTemplates,
                                NoteDocumentCodec noteDocumentCodec,
                                BlockNoteMapper blockNoteMapper,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper,
+                               IndexRefreshService indexRefreshService) {
         this.noteRepository = noteRepository;
         this.noteRevisionRepository = noteRevisionRepository;
         this.documentOperationRepository = documentOperationRepository;
@@ -77,6 +80,7 @@ public class NoteWorkflowService {
         this.noteDocumentCodec = noteDocumentCodec;
         this.blockNoteMapper = blockNoteMapper;
         this.objectMapper = objectMapper;
+        this.indexRefreshService = indexRefreshService;
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +139,8 @@ public class NoteWorkflowService {
         saved.setCurrentRevisionId(revision.getId());
         noteRepository.save(saved);
         refreshNotebookSummary(notebook);
+        indexRefreshService.scheduleNoteRefresh(saved.getId());
+        indexRefreshService.scheduleNotebookRefresh(notebook.getId());
         return toDetailResponse(saved);
     }
 
@@ -161,6 +167,10 @@ public class NoteWorkflowService {
         note.setCurrentRevisionId(revision.getId());
         noteRepository.save(note);
         refreshNotebookSummary(note.getNotebook());
+        indexRefreshService.scheduleNoteRefresh(note.getId());
+        if (note.getNotebook() != null) {
+            indexRefreshService.scheduleNotebookRefresh(note.getNotebook().getId());
+        }
         return toDetailResponse(note);
     }
 
@@ -235,6 +245,10 @@ public class NoteWorkflowService {
         DocumentOperation savedOperation = documentOperationRepository.save(operation);
 
         refreshNotebookSummary(note.getNotebook());
+        indexRefreshService.scheduleNoteRefresh(note.getId());
+        if (note.getNotebook() != null) {
+            indexRefreshService.scheduleNotebookRefresh(note.getNotebook().getId());
+        }
         return new MutationResult(
             applyResult,
             toDetailResponse(note),

@@ -13,15 +13,16 @@ public class AiProperties {
     private String anthropicApiKey = "";
     private String openAiApiKey = "";
     private double routeAutoApplyThreshold = 0.62;
-    private String routerModel = "gpt-5-mini-2025-08-07";
-    private String plannerModel = "gpt-5.4-2026-03-05";
-    private String summaryModel = "gpt-5-mini-2025-08-07";
+    private String routerModel = "gpt-5.4-mini";
+    private String plannerModel = "gpt-5.4-mini";
+    private String summaryModel = "gpt-5.4-mini";
     private String routerPromptId = "";
     private String plannerPromptId = "";
     private String summaryPromptId = "";
     private String openAiBaseUrl = "https://api.openai.com/v1";
     private int chatCommitRateLimitCount = 100;
     private int chatCommitRateLimitWindowMinutes = 30;
+    private String retrievalMode = "hybrid";
 
     public String getProvider() {
         return provider;
@@ -141,5 +142,13 @@ public class AiProperties {
 
     public void setChatCommitRateLimitWindowMinutes(int chatCommitRateLimitWindowMinutes) {
         this.chatCommitRateLimitWindowMinutes = chatCommitRateLimitWindowMinutes;
+    }
+
+    public String getRetrievalMode() {
+        return retrievalMode;
+    }
+
+    public void setRetrievalMode(String retrievalMode) {
+        this.retrievalMode = retrievalMode;
     }
 }

@@ -36,6 +36,7 @@ export function ChatComposer({ onSubmit, busy }: ChatComposerProps) {
       <div className={styles.inputWrap}>
         <TextareaAutosize
           ref={inputRef}
+          data-testid="chat-input"
           className={styles.input}
           placeholder="Send a message..."
           value={value}

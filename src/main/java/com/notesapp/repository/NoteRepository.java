@@ -20,4 +20,6 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     java.util.Optional<Note> findByUserIdAndNotebook_IdAndTitleIgnoreCase(Long userId, Long notebookId, String title);
 
     Optional<Note> findByUserIdAndNotebook_IdAndOccurredAtAndRawText(Long userId, Long notebookId, Instant occurredAt, String rawText);
+
+    List<Note> findByNotebook_IdOrderByUpdatedAtDesc(Long notebookId);
 }

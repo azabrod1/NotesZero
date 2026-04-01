@@ -176,6 +176,7 @@ export function App() {
 
       {!chatOpen && (
         <button
+          data-testid="chat-fab"
           className={styles.chatFab}
           onClick={() => setChatOpen(true)}
           aria-label="Open chat"

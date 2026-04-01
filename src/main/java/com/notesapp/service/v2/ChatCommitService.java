@@ -8,6 +8,7 @@ import com.notesapp.domain.Notebook;
 import com.notesapp.repository.ChatEventRepository;
 import com.notesapp.repository.NoteRepository;
 import com.notesapp.repository.NotebookRepository;
+import com.notesapp.config.AiProperties;
 import com.notesapp.service.NotFoundException;
 import com.notesapp.service.ValidationException;
 import com.notesapp.service.aiwrite.AiCallTraceV1;
@@ -15,6 +16,7 @@ import com.notesapp.service.aiwrite.AiWriteProvider;
 import com.notesapp.service.aiwrite.AiWriteProviderSelector;
 import com.notesapp.service.aiwrite.CommitDebugTraceV1;
 import com.notesapp.service.aiwrite.DeterministicRetrievalService;
+import com.notesapp.service.routing.HybridRetrievalService;
 import com.notesapp.service.aiwrite.NoteCandidate;
 import com.notesapp.service.aiwrite.NoteRetrievalCandidateTraceV1;
 import com.notesapp.service.aiwrite.NotebookRetrievalCandidateTraceV1;
@@ -52,27 +54,33 @@ public class ChatCommitService {
     private final NotebookRepository notebookRepository;
     private final NoteRepository noteRepository;
     private final DeterministicRetrievalService retrievalService;
+    private final HybridRetrievalService hybridRetrievalService;
     private final AiWriteProviderSelector aiWriteProviderSelector;
     private final NoteWorkflowService noteWorkflowService;
     private final CanonicalNoteTemplates canonicalNoteTemplates;
     private final ObjectMapper objectMapper;
+    private final AiProperties aiProperties;
 
     public ChatCommitService(ChatEventRepository chatEventRepository,
                              NotebookRepository notebookRepository,
                              NoteRepository noteRepository,
                              DeterministicRetrievalService retrievalService,
+                             HybridRetrievalService hybridRetrievalService,
                              AiWriteProviderSelector aiWriteProviderSelector,
                              NoteWorkflowService noteWorkflowService,
                              CanonicalNoteTemplates canonicalNoteTemplates,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             AiProperties aiProperties) {
         this.chatEventRepository = chatEventRepository;
         this.notebookRepository = notebookRepository;
         this.noteRepository = noteRepository;
         this.retrievalService = retrievalService;
+        this.hybridRetrievalService = hybridRetrievalService;
         this.aiWriteProviderSelector = aiWriteProviderSelector;
         this.noteWorkflowService = noteWorkflowService;
         this.canonicalNoteTemplates = canonicalNoteTemplates;
         this.objectMapper = objectMapper;
+        this.aiProperties = aiProperties;
     }
 
     @Transactional
@@ -86,14 +94,15 @@ public class ChatCommitService {
         chatEvent = chatEventRepository.save(chatEvent);
 
         long retrievalStartedAt = System.nanoTime();
-        RetrievalBundle retrievalBundle = retrievalService.retrieve(
-            request.getMessage(),
-            request.getSelectedNotebookId(),
-            request.getSelectedNoteId()
-        );
+        boolean useHybrid = "hybrid".equalsIgnoreCase(aiProperties.getRetrievalMode());
+        RetrievalBundle retrievalBundle = useHybrid
+            ? hybridRetrievalService.retrieve(request.getMessage(), request.getSelectedNotebookId(), request.getSelectedNoteId())
+            : retrievalService.retrieve(request.getMessage(), request.getSelectedNotebookId(), request.getSelectedNoteId());
         NoteDocumentV1 selectedNoteDocument = request.getSelectedNoteId() == null
             ? null
-            : retrievalService.getSelectedNoteDocument(request.getSelectedNoteId());
+            : (useHybrid
+                ? hybridRetrievalService.getSelectedNoteDocument(request.getSelectedNoteId())
+                : retrievalService.getSelectedNoteDocument(request.getSelectedNoteId()));
         long retrievalLatencyMs = elapsedMillis(retrievalStartedAt);
 
         AiWriteProvider provider = aiWriteProviderSelector.activeProvider();
@@ -108,18 +117,50 @@ public class ChatCommitService {
         RouteDecision routeDecision = provider.routeWithTrace(routeRequestContext);
         RoutePlanV1 routePlan = routeDecision.routePlan();
         AiCallTraceV1 routeTrace = routeDecision.trace();
+
+        // Handle NEED_MORE_CONTEXT: fetch requested notes and retry routing once
+        if (routePlan.intent() == RouteIntent.NEED_MORE_CONTEXT
+            && routePlan.needContextNoteIds() != null
+            && !routePlan.needContextNoteIds().isEmpty()) {
+            NoteDocumentV1 extraDocument = noteWorkflowService.loadDocument(routePlan.needContextNoteIds().get(0));
+            RouteRequestContext retryContext = new RouteRequestContext(
+                request.getMessage(),
+                request.getSelectedNotebookId(),
+                request.getSelectedNoteId(),
+                recentMessages(request.getRecentChatEventIds()),
+                retrievalBundle,
+                extraDocument != null ? extraDocument : selectedNoteDocument
+            );
+            RouteDecision retryDecision = provider.routeWithTrace(retryContext);
+            routePlan = retryDecision.routePlan();
+            routeTrace = retryDecision.trace();
+            // If still NEED_MORE_CONTEXT after retry, fall back to CLARIFY
+            if (routePlan.intent() == RouteIntent.NEED_MORE_CONTEXT) {
+                routePlan = new RoutePlanV1(
+                    RouteIntent.CLARIFY,
+                    routePlan.targetNotebookId(),
+                    routePlan.targetNoteId(),
+                    routePlan.targetNoteType(),
+                    routePlan.confidence(),
+                    routePlan.reasonCodes(),
+                    RouteStrategy.CLARIFY,
+                    "I'm not sure which note to update. Could you clarify?"
+                );
+            }
+        }
+
         chatEvent.setRoutePlanJson(writeJson(routePlan));
         RetrievalDebugTraceV1 retrievalTrace = request.isIncludeDebugTrace()
             ? buildRetrievalTrace(request, retrievalBundle, retrievalLatencyMs)
             : null;
 
-        if (routePlan.intent() == com.notesapp.service.aiwrite.RouteIntent.ANSWER_ONLY
-            || routePlan.intent() == com.notesapp.service.aiwrite.RouteIntent.CLARIFY) {
+        if (routePlan.intent() == RouteIntent.ANSWER_ONLY
+            || routePlan.intent() == RouteIntent.CLARIFY) {
             String answer = routePlan.intent() == RouteIntent.ANSWER_ONLY
                 ? answer(request.getMessage(), routePlan, retrievalBundle)
                 : routePlan.answer();
             if (answer == null || answer.isBlank()) {
-                answer = routePlan.intent() == com.notesapp.service.aiwrite.RouteIntent.ANSWER_ONLY
+                answer = routePlan.intent() == RouteIntent.ANSWER_ONLY
                     ? answer(request.getMessage(), routePlan, retrievalBundle)
                     : "Which notebook or note should I update?";
             }

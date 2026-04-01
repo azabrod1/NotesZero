@@ -247,7 +247,6 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
 
     private RoutePlanV1 sanitizeRoutePlan(RouteRequestContext context, RoutePlanV1 raw) {
         RouteIntent intent = raw.intent() == null ? RouteIntent.CLARIFY : raw.intent();
-        double confidence = clamp(raw.confidence());
         Set<Long> allowedNotebookIds = allowedNotebookIds(context);
         Map<Long, NoteCandidate> allowedNotes = allowedNotes(context);
         NoteCandidate explicitMentionedNote = findExplicitMentionedNote(context.message(), allowedNotes.values());
@@ -257,6 +256,8 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         boolean lowSpecificityCapture = isLowSpecificityCapture(context.message());
         boolean questionLikeMessage = looksLikeQuestion(context.message());
         boolean selectedNoteUpdate = shouldStickToSelectedNote(context, explicitMentionedNote, explicitCreateRequest);
+        double confidence = adjustConfidenceMultiSignal(context, clamp(raw.confidence()),
+            raw.targetNoteId(), raw.targetNotebookId(), explicitMentionedNote, selectedNoteUpdate);
 
         Long targetNoteId = allowedNotes.containsKey(raw.targetNoteId()) ? raw.targetNoteId() : null;
         Long targetNotebookId = allowedNotebookIds.contains(raw.targetNotebookId()) ? raw.targetNotebookId() : null;
@@ -386,6 +387,11 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
                 answer = "Which notebook or note should I update?";
             }
             return new RoutePlanV1(intent, targetNotebookId, targetNoteId, targetNoteType, confidence, reasonCodes, strategy, answer);
+        }
+
+        if (intent == RouteIntent.NEED_MORE_CONTEXT) {
+            return new RoutePlanV1(intent, targetNotebookId, targetNoteId, targetNoteType, confidence,
+                reasonCodes, RouteStrategy.CLARIFY, answer, raw.needContextNoteIds());
         }
 
         if (explicitCreateRequest) {
@@ -725,6 +731,11 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         if (topNote.exactTitleMatch()) {
             return false;
         }
+        if (topNote.entityTags() != null && !topNote.entityTags().isEmpty()
+            && "active".equals(topNote.activityStatus())
+            && topNote.score() >= aiProperties.getRouteAutoApplyThreshold()) {
+            return false;
+        }
         if (topNote.score() < aiProperties.getRouteAutoApplyThreshold() + 0.03) {
             return true;
         }
@@ -744,7 +755,77 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         if (selectedNoteUpdate && context.selectedNoteId() != null && context.selectedNoteId().equals(targetNote.noteId())) {
             return true;
         }
-        return targetNote.exactTitleMatch() || mentionsNoteTitle(context.message(), targetNote.title());
+        if (targetNote.exactTitleMatch() || mentionsNoteTitle(context.message(), targetNote.title())) {
+            return true;
+        }
+        if (hasEntityTagOverlap(context.message(), targetNote) && "active".equals(targetNote.activityStatus())) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasEntityTagOverlap(String message, NoteCandidate note) {
+        if (message == null || message.isBlank() || note.entityTags() == null || note.entityTags().isEmpty()) {
+            return false;
+        }
+        String normalizedMessage = message.toLowerCase(Locale.ROOT);
+        for (String tag : note.entityTags()) {
+            if (tag != null && !tag.isBlank() && normalizedMessage.contains(tag.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Adjusts the router's self-reported confidence using multiple retrieval signals.
+     * Boosts confidence when strong evidence exists; penalizes when signals conflict.
+     */
+    private double adjustConfidenceMultiSignal(RouteRequestContext context, double rawConfidence,
+                                               Long targetNoteId, Long targetNotebookId,
+                                               NoteCandidate explicitMentionedNote,
+                                               boolean selectedNoteUpdate) {
+        double adjusted = rawConfidence;
+        NoteCandidate topNote = topNoteCandidate(context);
+        Double gap = topNoteGap(context.retrievalBundle());
+
+        // Boost: explicit mention or selected note match
+        if (explicitMentionedNote != null) {
+            adjusted = Math.max(adjusted, 0.90);
+        } else if (selectedNoteUpdate) {
+            adjusted = Math.max(adjusted, 0.85);
+        }
+
+        // Boost: exact title match on top candidate aligning with target
+        if (topNote != null && topNote.exactTitleMatch()
+            && targetNoteId != null && targetNoteId.equals(topNote.noteId())) {
+            adjusted = Math.max(adjusted, 0.88);
+        }
+
+        // Boost: entity tag overlap on active note
+        if (targetNoteId != null && topNote != null && targetNoteId.equals(topNote.noteId())
+            && hasEntityTagOverlap(context.message(), topNote)
+            && "active".equals(topNote.activityStatus())) {
+            adjusted += 0.05;
+        }
+
+        // Penalize: target doesn't match top retrieval candidate
+        if (targetNoteId != null && topNote != null && !targetNoteId.equals(topNote.noteId())) {
+            adjusted -= 0.10;
+        }
+
+        // Penalize: narrow gap between top two candidates (ambiguity)
+        if (gap != null && gap < 0.06 && topNote != null && !topNote.exactTitleMatch()) {
+            adjusted -= 0.08;
+        }
+
+        // Boost: wide gap means clear winner
+        if (gap != null && gap > 0.15 && topNote != null
+            && targetNoteId != null && targetNoteId.equals(topNote.noteId())) {
+            adjusted += 0.05;
+        }
+
+        return clamp(adjusted);
     }
 
     private boolean shouldPreferNotebookInbox(RouteRequestContext context,
@@ -775,6 +856,10 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
             || normalized.contains("create note")
             || normalized.contains("new note")
             || normalized.contains("project note")
+            || normalized.contains("entity log")
+            || normalized.contains("entity note")
+            || normalized.contains("reference note")
+            || normalized.contains("reference doc")
             || normalized.contains("note called")
             || normalized.contains("start a note");
     }
@@ -786,6 +871,12 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         String normalized = message.toLowerCase(Locale.ROOT);
         if (normalized.contains("project note")) {
             return CanonicalNoteTemplates.PROJECT_NOTE;
+        }
+        if (normalized.contains("entity log") || normalized.contains("entity note")) {
+            return CanonicalNoteTemplates.ENTITY_LOG;
+        }
+        if (normalized.contains("reference note") || normalized.contains("reference doc")) {
+            return CanonicalNoteTemplates.REFERENCE_NOTE;
         }
         if (normalized.contains("create a note")
             || normalized.contains("create note")
@@ -1623,6 +1714,24 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         for (NoteCandidate candidate : context.retrievalBundle().noteCandidates()) {
             allowed.put(candidate.noteId(), candidate);
         }
+        // Always include the selected note so it can be targeted even if not yet indexed
+        if (context.selectedNoteId() != null && !allowed.containsKey(context.selectedNoteId())
+            && context.selectedNoteDocument() != null) {
+            NoteDocumentV1 doc = context.selectedNoteDocument();
+            NoteCandidate selectedAsCandidate = new NoteCandidate(
+                context.selectedNoteId(),
+                doc.meta().notebookId(),
+                doc.meta().title(),
+                null,
+                doc.meta().noteType(),
+                List.of(),
+                null,
+                null,
+                0.0,
+                false
+            );
+            allowed.put(context.selectedNoteId(), selectedAsCandidate);
+        }
         return allowed;
     }
 
@@ -1953,14 +2062,20 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     private ObjectNode routeSchema() {
         ObjectNode schema = baseObjectSchema();
         schema.set("properties", objectProperties(Map.of(
-            "intent", enumSchema("string", List.of("WRITE_EXISTING_NOTE", "CREATE_NOTE", "ANSWER_ONLY", "CLARIFY")),
+            "intent", enumSchema("string", List.of("WRITE_EXISTING_NOTE", "CREATE_NOTE", "ANSWER_ONLY", "CLARIFY", "NEED_MORE_CONTEXT")),
             "targetNotebookId", nullableIntegerSchema(),
             "targetNoteId", nullableIntegerSchema(),
-            "targetNoteType", enumSchema("string", List.of(CanonicalNoteTemplates.PROJECT_NOTE, CanonicalNoteTemplates.GENERIC_NOTE)),
+            "targetNoteType", enumSchema("string", List.of(
+                CanonicalNoteTemplates.PROJECT_NOTE,
+                CanonicalNoteTemplates.GENERIC_NOTE,
+                CanonicalNoteTemplates.ENTITY_LOG,
+                CanonicalNoteTemplates.REFERENCE_NOTE
+            )),
             "confidence", numberSchema(),
             "reasonCodes", stringArraySchema(),
             "strategy", enumSchema("string", List.of("DIRECT_APPLY", "NOTE_INBOX", "NOTEBOOK_INBOX", "ANSWER_ONLY", "CLARIFY")),
-            "answer", nullableStringSchema()
+            "answer", nullableStringSchema(),
+            "needContextNoteIds", integerArraySchema()
         )));
         schema.set("required", stringArrayNode(List.of(
             "intent",
@@ -1970,7 +2085,8 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
             "confidence",
             "reasonCodes",
             "strategy",
-            "answer"
+            "answer",
+            "needContextNoteIds"
         )));
         return schema;
     }
@@ -2099,6 +2215,15 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         ObjectNode node = objectMapper.createObjectNode();
         node.put("type", "array");
         node.set("items", stringSchema());
+        return node;
+    }
+
+    private ObjectNode integerArraySchema() {
+        ObjectNode node = objectMapper.createObjectNode();
+        node.put("type", "array");
+        ObjectNode itemNode = objectMapper.createObjectNode();
+        itemNode.put("type", "integer");
+        node.set("items", itemNode);
         return node;
     }
 
