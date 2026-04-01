@@ -43,6 +43,8 @@ class ChatCommitServiceTest {
         null,
         null,
         null,
+        null,
+        null,
         null
     );
 
@@ -132,10 +134,12 @@ class ChatCommitServiceTest {
             mock(NotebookRepository.class),
             mock(NoteRepository.class),
             retrievalService,
+            null,
             providerSelector,
             noteWorkflowService,
             new CanonicalNoteTemplates(),
-            new ObjectMapper()
+            new ObjectMapper(),
+            null
         );
 
         CommitChatRequest request = new CommitChatRequest();
