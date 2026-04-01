@@ -108,7 +108,7 @@ final class OpenAiWritePrompts {
             - Never delete or rename sections the user has manually added (custom H2 headings not in the template).
             - Preserve user formatting choices: if the user uses bold, italic, custom structure within a section, maintain that style.
             - If route strategy is NOTE_INBOX or NOTEBOOK_INBOX, write only to the inbox section.
-            - If route intent is CREATE_NOTE and strategy is DIRECT_APPLY, include a CREATE_NOTE op first with title and summaryShort.
+            - If route intent is CREATE_NOTE and strategy is DIRECT_APPLY, include a CREATE_NOTE op first with title and summaryShort. Then add separate section ops for every piece of content the user requested — summaryShort is sidebar metadata only and does NOT satisfy a request to write a visible summary section.
             - If route intent is CREATE_NOTE and strategy is NOTEBOOK_INBOX, do not create a visible note; append to the inbox section instead.
             - If the route is WRITE_EXISTING_NOTE or CREATE_NOTE with DIRECT_APPLY and the user clearly requested a note change, do not return an empty ops list.
             - summaryShort must stay under 160 characters.

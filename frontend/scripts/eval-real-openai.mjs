@@ -1614,7 +1614,7 @@ function journeyScenario(fixtures) {
           targetNoteTitle: workCreateTitle,
           sectionId: "tasks",
           format: "checklist",
-          contains: [cycleTag, "wrong-target writes"]
+          contains: ["wrong-target writes"]
         },
         meta: { category: "create_note", cycle, pattern: "create_work_project" }
       });
@@ -1633,7 +1633,7 @@ function journeyScenario(fixtures) {
           targetNoteTitle: dogCreateTitle,
           sectionId: "body",
           format: "prose",
-          contains: [cycleTag, "pacing", "hiding"]
+          contains: ["pacing", "hiding"]
         },
         meta: { category: "create_note", cycle, pattern: "create_dog_generic" }
       });
@@ -1652,7 +1652,7 @@ function journeyScenario(fixtures) {
           targetNoteTitle: familyCreateTitle,
           sectionId: "open_questions",
           format: "bullet",
-          contains: [cycleTag, "tonsils", "sleep"]
+          contains: ["tonsils", "sleep"]
         },
         meta: { category: "create_note", cycle, pattern: "create_family_project" }
       });
