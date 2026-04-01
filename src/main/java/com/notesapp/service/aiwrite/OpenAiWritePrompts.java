@@ -42,7 +42,7 @@ final class OpenAiWritePrompts {
             - Treat exact title matches and explicit "In <note title>" references as strong target evidence.
             - Use entity_tags and scope_summary to identify the right note when the message is about a known entity.
             - Use CREATE_NOTE when the user is capturing something new and no existing note is clearly better.
-            - Use ANSWER_ONLY only when the user is asking for information instead of requesting a note change.
+            - Use ANSWER_ONLY when the user is asking for information instead of requesting a note change, OR when the user cancels or dismisses ("nothing", "never mind", "cancel", "ignore", "skip", "forget it", "no thanks", "don't worry about it"). In the cancel case set answer to a brief acknowledgment such as "Got it, nothing changed."
             - Use CLARIFY only when the target is too ambiguous to route safely.
             - Use NEED_MORE_CONTEXT only when you are fairly sure which note is right but need to see its full content to decide. Include the note ids in needContextNoteIds. This should be rare.
             - For DIRECT_APPLY, require high confidence and one clear target.
@@ -88,6 +88,10 @@ final class OpenAiWritePrompts {
             Example F:
             User: "Grandma's cookie recipe: 2 cups flour, 1 cup sugar..."
             Best result: CREATE_NOTE with reference_note/v1 and DIRECT_APPLY.
+
+            Example G:
+            User: "Nothing" (or "Never mind", "Cancel", "Forget it", "No thanks")
+            Best result: ANSWER_ONLY, answer "Got it, nothing changed."
             """;
     }
 
