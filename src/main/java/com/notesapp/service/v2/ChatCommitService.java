@@ -14,6 +14,7 @@ import com.notesapp.service.ValidationException;
 import com.notesapp.service.aiwrite.AiCallTraceV1;
 import com.notesapp.service.aiwrite.AiWriteProvider;
 import com.notesapp.service.aiwrite.AiWriteProviderSelector;
+import com.notesapp.service.aiwrite.NanoTriageResult;
 import com.notesapp.service.aiwrite.CommitDebugTraceV1;
 import com.notesapp.service.aiwrite.DeterministicRetrievalService;
 import com.notesapp.service.routing.HybridRetrievalService;
@@ -93,6 +94,32 @@ public class ChatCommitService {
         chatEvent.setCreatedAt(Instant.now());
         chatEvent = chatEventRepository.save(chatEvent);
 
+        AiWriteProvider provider = aiWriteProviderSelector.activeProvider();
+
+        // Nano triage: classify message before retrieval to short-circuit cancel/chitchat
+        NanoTriageResult triage = provider.triage(request.getMessage().trim());
+        if (triage != null && (triage.type() == NanoTriageResult.TriageType.CANCEL
+            || triage.type() == NanoTriageResult.TriageType.CHITCHAT)) {
+            String triageAnswer = triage.reply() != null && !triage.reply().isBlank()
+                ? triage.reply() : "Got it.";
+            RoutePlanV1 triagePlan = new RoutePlanV1(
+                RouteIntent.ANSWER_ONLY, null, null, null, 1.0,
+                List.of("nano_triage_" + triage.type().name().toLowerCase()),
+                RouteStrategy.ANSWER_ONLY, triageAnswer
+            );
+            chatEvent.setRoutePlanJson(writeJson(triagePlan));
+            chatEvent.setApplyResultJson(writeJson(java.util.Map.of("answer", triageAnswer)));
+            chatEventRepository.save(chatEvent);
+            return new CommitChatResponse(
+                chatEvent.getId(),
+                triagePlan,
+                new PatchPlanV1(null, null, null, List.of(), false, "nano-triage"),
+                null, null, List.of(), null, null,
+                triageAnswer,
+                null
+            );
+        }
+
         long retrievalStartedAt = System.nanoTime();
         boolean useHybrid = "hybrid".equalsIgnoreCase(aiProperties.getRetrievalMode());
         RetrievalBundle retrievalBundle = useHybrid
@@ -105,7 +132,6 @@ public class ChatCommitService {
                 : retrievalService.getSelectedNoteDocument(request.getSelectedNoteId()));
         long retrievalLatencyMs = elapsedMillis(retrievalStartedAt);
 
-        AiWriteProvider provider = aiWriteProviderSelector.activeProvider();
         RouteRequestContext routeRequestContext = new RouteRequestContext(
             request.getMessage(),
             request.getSelectedNotebookId(),

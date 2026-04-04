@@ -5,8 +5,10 @@ import com.notesapp.domain.ChatEvent;
 import com.notesapp.repository.ChatEventRepository;
 import com.notesapp.repository.NoteRepository;
 import com.notesapp.repository.NotebookRepository;
+import com.notesapp.config.AiProperties;
 import com.notesapp.service.aiwrite.AiWriteProvider;
 import com.notesapp.service.aiwrite.AiWriteProviderSelector;
+import com.notesapp.service.aiwrite.NanoTriageResult;
 import com.notesapp.service.aiwrite.DeterministicRetrievalService;
 import com.notesapp.service.aiwrite.NoteCandidate;
 import com.notesapp.service.aiwrite.NotebookCandidate;
@@ -101,7 +103,11 @@ class ChatCommitServiceTest {
             List.of(new NoteCandidate(21L, 2L, "Deploy Runbook", "Deployment notes", "generic_note/v1", List.of("Summary", "Body"), "Rollback uses the previous green build.", Instant.now(), 0.92, true))
         ));
 
+        AiProperties aiProperties = mock(AiProperties.class);
+        when(aiProperties.getRetrievalMode()).thenReturn("deterministic");
+
         AiWriteProvider provider = mock(AiWriteProvider.class);
+        when(provider.triage(any(String.class))).thenReturn(new NanoTriageResult(NanoTriageResult.TriageType.WRITE, null));
         when(provider.routeWithTrace(any())).thenReturn(new RouteDecision(
             new RoutePlanV1(
                 RouteIntent.ANSWER_ONLY,
@@ -139,7 +145,7 @@ class ChatCommitServiceTest {
             noteWorkflowService,
             new CanonicalNoteTemplates(),
             new ObjectMapper(),
-            null
+            aiProperties
         );
 
         CommitChatRequest request = new CommitChatRequest();

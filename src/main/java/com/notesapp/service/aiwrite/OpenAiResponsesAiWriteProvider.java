@@ -35,6 +35,25 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
+    private static final String NANO_TRIAGE_INSTRUCTIONS = """
+        You are a fast message classifier for NotesZero, an AI-native note-taking app.
+
+        Classify the user's message into one of four types:
+        - "write": the user wants to create or update a note (add info, capture something, save, update, edit)
+        - "question": the user is asking for information from their notes (what does X say, where is Y, tell me about Z)
+        - "cancel": the user is cancelling or saying nothing needs to happen ("nothing", "never mind", "cancel", "skip", "ignore", "forget it", "no thanks", "don't worry", "actually nevermind")
+        - "chitchat": a greeting, meta question about the app, or irrelevant social message ("hello", "what does this app do", "how does this work", "thanks", "ok", "cool")
+
+        Rules:
+        - For "write" and "question": set reply to ""
+        - For "cancel": write a brief natural acknowledgment in reply (e.g. "Got it, nothing changed.", "No problem.", "Understood, I'll leave things as they are.")
+        - For "chitchat": write one helpful sentence in reply (e.g. for greetings: "Hi! What would you like to capture today?"; for app questions: "NotesZero is an AI-native notes app — just tell me what to note down.")
+
+        Be decisive. If unsure between write and question, pick write.
+        """;
+
+    private record NanoTriageRaw(String type, String reply) {}
+
     private final AiProperties aiProperties;
     private final CanonicalNoteTemplates canonicalNoteTemplates;
     private final ObjectMapper objectMapper;
@@ -53,6 +72,27 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
 
     public boolean isConfigured() {
         return aiProperties.getOpenAiApiKey() != null && !aiProperties.getOpenAiApiKey().isBlank();
+    }
+
+    @Override
+    public NanoTriageResult triage(String message) {
+        StructuredInvocationResult<NanoTriageRaw> raw = invokeStructured(
+            aiProperties.getTriageModel(),
+            null,
+            NANO_TRIAGE_INSTRUCTIONS,
+            "User message: " + message,
+            "noteszero_nano_triage_v1",
+            triageSchema(),
+            new TypeReference<>() {
+            }
+        );
+        NanoTriageResult.TriageType triageType = switch (raw.value().type()) {
+            case "cancel" -> NanoTriageResult.TriageType.CANCEL;
+            case "chitchat" -> NanoTriageResult.TriageType.CHITCHAT;
+            case "question" -> NanoTriageResult.TriageType.QUESTION;
+            default -> NanoTriageResult.TriageType.WRITE;
+        };
+        return new NanoTriageResult(triageType, raw.value().reply());
     }
 
     @Override
@@ -2013,6 +2053,7 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
 
     private int maxOutputTokens(String schemaName) {
         return switch (schemaName) {
+            case "noteszero_nano_triage_v1" -> 80;
             case "noteszero_route_plan_v1" -> 450;
             case "noteszero_note_summary_v1" -> 220;
             default -> 1200;
@@ -2147,6 +2188,16 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
             "fallbackToInbox",
             "plannerPromptVersion"
         )));
+        return schema;
+    }
+
+    private ObjectNode triageSchema() {
+        ObjectNode schema = baseObjectSchema();
+        schema.set("properties", objectProperties(Map.of(
+            "type", enumSchema("string", List.of("write", "question", "cancel", "chitchat")),
+            "reply", stringSchema()
+        )));
+        schema.set("required", stringArrayNode(List.of("type", "reply")));
         return schema;
     }
 

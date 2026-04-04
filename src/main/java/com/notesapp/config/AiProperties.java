@@ -13,6 +13,7 @@ public class AiProperties {
     private String anthropicApiKey = "";
     private String openAiApiKey = "";
     private double routeAutoApplyThreshold = 0.62;
+    private String triageModel = "gpt-5.4-nano";
     private String routerModel = "gpt-5.4-mini";
     private String plannerModel = "gpt-5.4-mini";
     private String summaryModel = "gpt-5.4-mini";
@@ -70,6 +71,14 @@ public class AiProperties {
 
     public void setRouteAutoApplyThreshold(double routeAutoApplyThreshold) {
         this.routeAutoApplyThreshold = routeAutoApplyThreshold;
+    }
+
+    public String getTriageModel() {
+        return triageModel;
+    }
+
+    public void setTriageModel(String triageModel) {
+        this.triageModel = triageModel;
     }
 
     public String getRouterModel() {

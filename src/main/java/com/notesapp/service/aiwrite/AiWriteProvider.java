@@ -12,6 +12,10 @@ public interface AiWriteProvider {
         return planWithTrace(context).patchPlan();
     }
 
+    default NanoTriageResult triage(String message) {
+        return new NanoTriageResult(NanoTriageResult.TriageType.WRITE, null);
+    }
+
     RouteDecision routeWithTrace(RouteRequestContext context);
 
     PatchDecision planWithTrace(PatchRequestContext context);

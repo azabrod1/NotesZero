@@ -3,6 +3,7 @@ package com.notesapp.service.aiwrite;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notesapp.config.AiProperties;
+import com.notesapp.service.aiwrite.NanoTriageResult;
 import com.notesapp.service.document.CanonicalNoteTemplates;
 import com.notesapp.service.document.NoteDocumentMeta;
 import com.notesapp.service.document.NoteDocumentV1;
@@ -46,6 +47,7 @@ class OpenAiResponsesAiWriteProviderTest {
         properties.setRouterModel("gpt-5-mini-2025-08-07");
         properties.setPlannerModel("gpt-5-mini-2025-08-07");
         properties.setSummaryModel("gpt-5-mini-2025-08-07");
+        properties.setTriageModel("gpt-5.4-nano-test");
 
         provider = new OpenAiResponsesAiWriteProvider(properties, new CanonicalNoteTemplates(), objectMapper);
     }
@@ -93,7 +95,7 @@ class OpenAiResponsesAiWriteProviderTest {
         assertThat(routePlan.targetNoteId()).isEqualTo(11L);
         JsonNode request = capturedRequests.remove();
         assertThat(request.path("model").asText()).isEqualTo("gpt-5-mini-2025-08-07");
-        assertThat(request.path("reasoning").path("effort").asText()).isEqualTo("minimal");
+        assertThat(request.path("reasoning").path("effort").asText()).isEqualTo("low");
         assertThat(request.path("text").path("format").path("name").asText()).isEqualTo("noteszero_route_plan_v1");
     }
 
@@ -213,7 +215,7 @@ class OpenAiResponsesAiWriteProviderTest {
 
         assertThat(summary.summaryShort()).contains("Launch plan");
         JsonNode request = capturedRequests.remove();
-        assertThat(request.path("reasoning").path("effort").asText()).isEqualTo("minimal");
+        assertThat(request.path("reasoning").path("effort").asText()).isEqualTo("low");
         assertThat(request.path("text").path("format").path("name").asText()).isEqualTo("noteszero_note_summary_v1");
     }
 
@@ -791,6 +793,74 @@ class OpenAiResponsesAiWriteProviderTest {
 
         assertThat(patchPlan.ops()).hasSize(1);
         assertThat(patchPlan.ops().getFirst().contentMarkdown()).contains("./deploy --env staging-w01 --dry-run");
+    }
+
+    @Test
+    void triageClassifiesCancelMessageAndGeneratesReply() throws Exception {
+        queueOutput("""
+            {"type":"cancel","reply":"Got it, nothing changed."}
+            """);
+
+        NanoTriageResult result = provider.triage("Nothing");
+
+        assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.CANCEL);
+        assertThat(result.reply()).isEqualTo("Got it, nothing changed.");
+        JsonNode request = capturedRequests.remove();
+        assertThat(request.path("model").asText()).isEqualTo("gpt-5.4-nano-test");
+        assertThat(request.path("reasoning").isMissingNode()).isTrue();
+        assertThat(request.path("text").path("format").path("name").asText()).isEqualTo("noteszero_nano_triage_v1");
+        assertThat(request.path("max_output_tokens").asInt()).isEqualTo(80);
+    }
+
+    @Test
+    void triageClassifiesChitchatAndGeneratesReply() throws Exception {
+        queueOutput("""
+            {"type":"chitchat","reply":"Hi! What would you like to capture today?"}
+            """);
+
+        NanoTriageResult result = provider.triage("Hello!");
+
+        assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.CHITCHAT);
+        assertThat(result.reply()).isEqualTo("Hi! What would you like to capture today?");
+        JsonNode request = capturedRequests.remove();
+        assertThat(request.path("reasoning").isMissingNode()).isTrue();
+    }
+
+    @Test
+    void triageClassifiesWriteWithEmptyReply() throws Exception {
+        queueOutput("""
+            {"type":"write","reply":""}
+            """);
+
+        NanoTriageResult result = provider.triage("Add a task: deploy to staging");
+
+        assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.WRITE);
+        assertThat(result.reply()).isEmpty();
+    }
+
+    @Test
+    void triageClassifiesQuestionWithEmptyReply() throws Exception {
+        queueOutput("""
+            {"type":"question","reply":""}
+            """);
+
+        NanoTriageResult result = provider.triage("What does the deploy runbook say about rollback?");
+
+        assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.QUESTION);
+        assertThat(result.reply()).isEmpty();
+    }
+
+    @Test
+    void triagePassesUserMessageInInput() throws Exception {
+        queueOutput("""
+            {"type":"write","reply":""}
+            """);
+
+        provider.triage("Add a meeting note");
+
+        JsonNode request = capturedRequests.remove();
+        String inputText = request.path("input").get(0).path("content").get(0).path("text").asText();
+        assertThat(inputText).contains("Add a meeting note");
     }
 
     private void queueOutput(String json) throws Exception {

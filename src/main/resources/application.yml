@@ -39,6 +39,7 @@ notes:
     notebook-routing-high-risk-threshold: 0.72
     route-auto-apply-threshold: 0.62
     monthly-budget-gbp: 50.0
+    triage-model: ${NOTES_AI_TRIAGE_MODEL:gpt-5.4-nano}
     router-model: ${NOTES_AI_ROUTER_MODEL:gpt-5.4-mini}
     planner-model: ${NOTES_AI_PLANNER_MODEL:gpt-5.4-mini}
     summary-model: ${NOTES_AI_SUMMARY_MODEL:gpt-5.4-mini}

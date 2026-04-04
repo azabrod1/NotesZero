@@ -20,7 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
     "notes.ai.provider=mock",
-    "notes.ai.open-ai-api-key="
+    "notes.ai.open-ai-api-key=",
+    "notes.ai.retrieval-mode=deterministic"
 })
 class ChatCommitDebugTraceIntegrationTest {
 
