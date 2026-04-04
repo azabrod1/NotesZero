@@ -801,7 +801,7 @@ class OpenAiResponsesAiWriteProviderTest {
             {"type":"cancel","reply":"Got it, nothing changed."}
             """);
 
-        NanoTriageResult result = provider.triage("Nothing");
+        NanoTriageResult result = provider.triage("Nothing", List.of());
 
         assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.CANCEL);
         assertThat(result.reply()).isEqualTo("Got it, nothing changed.");
@@ -818,7 +818,7 @@ class OpenAiResponsesAiWriteProviderTest {
             {"type":"chitchat","reply":"Hi! What would you like to capture today?"}
             """);
 
-        NanoTriageResult result = provider.triage("Hello!");
+        NanoTriageResult result = provider.triage("Hello!", List.of());
 
         assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.CHITCHAT);
         assertThat(result.reply()).isEqualTo("Hi! What would you like to capture today?");
@@ -832,7 +832,7 @@ class OpenAiResponsesAiWriteProviderTest {
             {"type":"write","reply":""}
             """);
 
-        NanoTriageResult result = provider.triage("Add a task: deploy to staging");
+        NanoTriageResult result = provider.triage("Add a task: deploy to staging", List.of());
 
         assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.WRITE);
         assertThat(result.reply()).isEmpty();
@@ -844,10 +844,22 @@ class OpenAiResponsesAiWriteProviderTest {
             {"type":"question","reply":""}
             """);
 
-        NanoTriageResult result = provider.triage("What does the deploy runbook say about rollback?");
+        NanoTriageResult result = provider.triage("What does the deploy runbook say about rollback?", List.of());
 
         assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.QUESTION);
         assertThat(result.reply()).isEmpty();
+    }
+
+    @Test
+    void triageClassifiesOfftopicAndGeneratesRedirect() throws Exception {
+        queueOutput("""
+            {"type":"offtopic","reply":"I'm a note-taking app — I can't help with that, but I can capture or find something in your notes!"}
+            """);
+
+        NanoTriageResult result = provider.triage("What is the capital of France?", List.of());
+
+        assertThat(result.type()).isEqualTo(NanoTriageResult.TriageType.OFFTOPIC);
+        assertThat(result.reply()).contains("note-taking app");
     }
 
     @Test
@@ -856,11 +868,27 @@ class OpenAiResponsesAiWriteProviderTest {
             {"type":"write","reply":""}
             """);
 
-        provider.triage("Add a meeting note");
+        provider.triage("Add a meeting note", List.of());
 
         JsonNode request = capturedRequests.remove();
         String inputText = request.path("input").get(0).path("content").get(0).path("text").asText();
         assertThat(inputText).contains("Add a meeting note");
+    }
+
+    @Test
+    void triageIncludesConversationHistoryInInput() throws Exception {
+        queueOutput("""
+            {"type":"write","reply":""}
+            """);
+
+        provider.triage("yes", List.of("Add a task to schedule Max's dental cleaning", "Do you mean the vet?"));
+
+        JsonNode request = capturedRequests.remove();
+        String inputText = request.path("input").get(0).path("content").get(0).path("text").asText();
+        assertThat(inputText).contains("Recent conversation:");
+        assertThat(inputText).contains("schedule Max's dental cleaning");
+        assertThat(inputText).contains("Do you mean the vet?");
+        assertThat(inputText).contains("User message: yes");
     }
 
     private void queueOutput(String json) throws Exception {

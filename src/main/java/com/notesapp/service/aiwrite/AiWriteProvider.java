@@ -12,7 +12,7 @@ public interface AiWriteProvider {
         return planWithTrace(context).patchPlan();
     }
 
-    default NanoTriageResult triage(String message) {
+    default NanoTriageResult triage(String message, java.util.List<String> recentMessages) {
         return new NanoTriageResult(NanoTriageResult.TriageType.WRITE, null);
     }
 

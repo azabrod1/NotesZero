@@ -219,9 +219,17 @@ public class HybridRetrievalService {
         for (Long noteId : candidateNoteIds) {
             NoteRoutingIndex indexed = noteIndexRepo.findById(noteId).orElse(null);
             Note note = noteRepository.findById(noteId).orElse(null);
-            if (indexed == null || note == null) continue;
+            if (note == null) continue;
+            if (indexed == null && !noteId.equals(selectedNoteId)) continue;
             if (isSystemInboxNote(note)) continue;
             if (note.getDocumentJson() == null || note.getDocumentJson().isBlank()) continue;
+
+            // Selected note without index — use base score + selected note boost only
+            if (indexed == null) {
+                double fallbackScore = 0.05 + SELECTED_NOTE_STRONG_BOOST + recencyBoost(note.getUpdatedAt());
+                scored.put(noteId, new ScoredNote(null, note, clamp(fallbackScore), false, null));
+                continue;
+            }
 
             double score = 0.05;
 
@@ -281,20 +289,21 @@ public class HybridRetrievalService {
                 if ((topSnippet == null || topSnippet.isBlank()) && !doc.sections().isEmpty()) {
                     topSnippet = bestContentSnippet(messageTokens, doc);
                 }
+                NoteRoutingIndex idx = sn.indexed();
                 return new NoteCandidate(
-                    sn.indexed().getNoteId(),
-                    sn.indexed().getNotebookId(),
-                    sn.indexed().getTitle(),
+                    sn.note().getId(),
+                    sn.note().getNotebook() != null ? sn.note().getNotebook().getId() : null,
+                    idx != null ? idx.getTitle() : sn.note().getTitle(),
                     sn.note().getSummaryShort(),
-                    sn.indexed().getNoteFamily(),
+                    idx != null ? idx.getNoteFamily() : sn.note().getNoteType(),
                     sectionLabels,
                     topSnippet,
                     sn.note().getUpdatedAt(),
                     sn.score(),
                     sn.exactTitleMatch(),
-                    sn.indexed().getScopeSummary(),
-                    sn.indexed().entityTagList(),
-                    sn.indexed().getActivityStatus()
+                    idx != null ? idx.getScopeSummary() : null,
+                    idx != null ? idx.entityTagList() : List.of(),
+                    idx != null ? idx.getActivityStatus() : null
                 );
             })
             .toList();

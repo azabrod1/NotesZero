@@ -19,6 +19,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,18 +39,21 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     private static final String NANO_TRIAGE_INSTRUCTIONS = """
         You are a fast message classifier for NotesZero, an AI-native note-taking app.
 
-        Classify the user's message into one of four types:
+        Classify the user's message into one of five types:
         - "write": the user wants to create or update a note (add info, capture something, save, update, edit)
         - "question": the user is asking for information from their notes (what does X say, where is Y, tell me about Z)
-        - "cancel": the user is cancelling or saying nothing needs to happen ("nothing", "never mind", "cancel", "skip", "ignore", "forget it", "no thanks", "don't worry", "actually nevermind")
-        - "chitchat": a greeting, meta question about the app, or irrelevant social message ("hello", "what does this app do", "how does this work", "thanks", "ok", "cool")
+        - "cancel": the user is cancelling or saying nothing needs to happen ("nothing", "never mind", "cancel", "skip", "forget it")
+        - "chitchat": a greeting, meta question about the app, or social message ("hello", "thanks", "what does this app do")
+        - "offtopic": obviously unrelated to note-taking — general knowledge, world events, math, trivia, opinions on topics unrelated to the user's notes ("what's the capital of France", "is there a war in Ukraine", "solve 2+2")
 
         Rules:
         - For "write" and "question": set reply to ""
-        - For "cancel": write a brief natural acknowledgment in reply (e.g. "Got it, nothing changed.", "No problem.", "Understood, I'll leave things as they are.")
-        - For "chitchat": write one helpful sentence in reply (e.g. for greetings: "Hi! What would you like to capture today?"; for app questions: "NotesZero is an AI-native notes app — just tell me what to note down.")
-
-        Be decisive. If unsure between write and question, pick write.
+        - For "cancel": write a brief natural acknowledgment in reply (e.g. "Got it, nothing changed.", "No problem.")
+        - For "chitchat": write one helpful sentence in reply steering back to notes (e.g. "Hi! What would you like to capture today?")
+        - For "offtopic": write a polite one-sentence redirect (vary the wording naturally, e.g. "I'm a note-taking app — I can't help with that, but I can capture or find something in your notes!")
+        - If recent conversation is provided and the user's message is a short affirmation or confirmation (yes, ok, sure, right, yep, yeah, got it, do it, go ahead), classify as "write" — it's likely confirming a prior suggestion.
+        - IMPORTANT: When in doubt, classify as "write" or "question" — never "offtopic". Only use "offtopic" for messages that are completely, obviously unrelated to any possible note-taking activity. If there's even a small chance the user wants to capture or look up something in their notes, classify as "write" or "question".
+        - If unsure between write and question, pick write.
         """;
 
     private record NanoTriageRaw(String type, String reply) {}
@@ -75,12 +79,22 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     }
 
     @Override
-    public NanoTriageResult triage(String message) {
+    public NanoTriageResult triage(String message, List<String> recentMessages) {
+        StringBuilder input = new StringBuilder();
+        if (recentMessages != null && !recentMessages.isEmpty()) {
+            input.append("Recent conversation:\n");
+            for (String msg : recentMessages) {
+                input.append("- ").append(msg).append("\n");
+            }
+            input.append("\n");
+        }
+        input.append("User message: ").append(message);
+
         StructuredInvocationResult<NanoTriageRaw> raw = invokeStructured(
             aiProperties.getTriageModel(),
             null,
             NANO_TRIAGE_INSTRUCTIONS,
-            "User message: " + message,
+            input.toString(),
             "noteszero_nano_triage_v1",
             triageSchema(),
             new TypeReference<>() {
@@ -90,6 +104,7 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
             case "cancel" -> NanoTriageResult.TriageType.CANCEL;
             case "chitchat" -> NanoTriageResult.TriageType.CHITCHAT;
             case "question" -> NanoTriageResult.TriageType.QUESTION;
+            case "offtopic" -> NanoTriageResult.TriageType.OFFTOPIC;
             default -> NanoTriageResult.TriageType.WRITE;
         };
         return new NanoTriageResult(triageType, raw.value().reply());
@@ -250,14 +265,14 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(normalizeBaseUrl() + "/responses"))
             .header("Authorization", "Bearer " + aiProperties.getOpenAiApiKey().trim())
-            .header("Content-Type", "application/json")
+            .header("Content-Type", "application/json; charset=utf-8")
             .timeout(REQUEST_TIMEOUT)
-            .POST(HttpRequest.BodyPublishers.ofString(writeJson(requestBody)))
+            .POST(HttpRequest.BodyPublishers.ofString(writeJson(requestBody), StandardCharsets.UTF_8))
             .build();
 
         long startedAt = System.nanoTime();
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("OpenAI Responses API failed with status "
                     + response.statusCode() + ": " + safeErrorMessage(response.body()));
@@ -2194,7 +2209,7 @@ public class OpenAiResponsesAiWriteProvider implements AiWriteProvider {
     private ObjectNode triageSchema() {
         ObjectNode schema = baseObjectSchema();
         schema.set("properties", objectProperties(Map.of(
-            "type", enumSchema("string", List.of("write", "question", "cancel", "chitchat")),
+            "type", enumSchema("string", List.of("write", "question", "cancel", "chitchat", "offtopic")),
             "reply", stringSchema()
         )));
         schema.set("required", stringArrayNode(List.of("type", "reply")));

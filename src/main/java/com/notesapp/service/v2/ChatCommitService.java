@@ -96,10 +96,12 @@ public class ChatCommitService {
 
         AiWriteProvider provider = aiWriteProviderSelector.activeProvider();
 
-        // Nano triage: classify message before retrieval to short-circuit cancel/chitchat
-        NanoTriageResult triage = provider.triage(request.getMessage().trim());
+        // Nano triage: classify message before retrieval to short-circuit cancel/chitchat/offtopic
+        List<String> recentMsgs = recentMessages(request.getRecentChatEventIds());
+        NanoTriageResult triage = provider.triage(request.getMessage().trim(), recentMsgs);
         if (triage != null && (triage.type() == NanoTriageResult.TriageType.CANCEL
-            || triage.type() == NanoTriageResult.TriageType.CHITCHAT)) {
+            || triage.type() == NanoTriageResult.TriageType.CHITCHAT
+            || triage.type() == NanoTriageResult.TriageType.OFFTOPIC)) {
             String triageAnswer = triage.reply() != null && !triage.reply().isBlank()
                 ? triage.reply() : "Got it.";
             RoutePlanV1 triagePlan = new RoutePlanV1(
@@ -206,7 +208,7 @@ public class ChatCommitService {
             );
         }
 
-        NoteDocumentV1 targetDocument = targetDocument(routePlan);
+        NoteDocumentV1 targetDocument = targetDocument(routePlan, request.getMessage());
         PatchDecision patchDecision = provider.planWithTrace(new PatchRequestContext(request.getMessage(), routePlan, targetDocument));
         PatchPlanV1 patchPlan = patchDecision.patchPlan();
         AiCallTraceV1 patchTrace = patchDecision.trace();
@@ -228,7 +230,7 @@ public class ChatCommitService {
                 throw ex;
             }
             RoutePlanV1 fallbackRoute = fallbackRoute(routePlan);
-            PatchDecision fallbackPatchDecision = provider.planWithTrace(new PatchRequestContext(request.getMessage(), fallbackRoute, targetDocument(fallbackRoute)));
+            PatchDecision fallbackPatchDecision = provider.planWithTrace(new PatchRequestContext(request.getMessage(), fallbackRoute, targetDocument(fallbackRoute, request.getMessage())));
             PatchPlanV1 fallbackPlan = fallbackPatchDecision.patchPlan();
             mutationResult = noteWorkflowService.applyPlannedMutation(
                 fallbackRoute,
@@ -316,15 +318,27 @@ public class ChatCommitService {
         );
     }
 
-    private NoteDocumentV1 targetDocument(RoutePlanV1 routePlan) {
+    private NoteDocumentV1 targetDocument(RoutePlanV1 routePlan, String userMessage) {
         if (routePlan.targetNoteId() != null) {
             return noteWorkflowService.loadDocument(routePlan.targetNoteId());
         }
+        String fallbackTitle = routePlan.strategy() == RouteStrategy.NOTEBOOK_INBOX
+            ? "Inbox"
+            : deriveTitle(userMessage);
         return canonicalNoteTemplates.createTemplate(
             routePlan.targetNoteType(),
             routePlan.targetNotebookId(),
-            routePlan.strategy() == RouteStrategy.NOTEBOOK_INBOX ? "Inbox" : "Untitled note"
+            fallbackTitle
         );
+    }
+
+    private String deriveTitle(String message) {
+        if (message == null || message.isBlank()) return "Untitled note";
+        String trimmed = message.strip();
+        if (trimmed.length() <= 60) {
+            return Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1);
+        }
+        return Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1, 57) + "...";
     }
 
     private String answer(String message, RoutePlanV1 routePlan, RetrievalBundle retrievalBundle) {

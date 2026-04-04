@@ -30,7 +30,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -107,7 +107,7 @@ class ChatCommitServiceTest {
         when(aiProperties.getRetrievalMode()).thenReturn("deterministic");
 
         AiWriteProvider provider = mock(AiWriteProvider.class);
-        when(provider.triage(any(String.class))).thenReturn(new NanoTriageResult(NanoTriageResult.TriageType.WRITE, null));
+        when(provider.triage(any(String.class), anyList())).thenReturn(new NanoTriageResult(NanoTriageResult.TriageType.WRITE, null));
         when(provider.routeWithTrace(any())).thenReturn(new RouteDecision(
             new RoutePlanV1(
                 RouteIntent.ANSWER_ONLY,
